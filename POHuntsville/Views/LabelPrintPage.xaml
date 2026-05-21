@@ -1,0 +1,112 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="POHuntsville.Views.LabelPrintPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:ffimageloading="clr-namespace:FFImageLoading.Maui;assembly=FFImageLoading.Maui"
+    xmlns:controls="clr-namespace:POHuntsville.Controls"
+    xmlns:local="clr-namespace:POHuntsville.ViewModels"
+    xmlns:view="clr-namespace:POHuntsville.Views"
+    x:Name="LabelPrint"
+    Title="Return Cart"
+    Shell.TabBarIsVisible="False">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <controls:StringToColorConverter x:Key="StringToColorConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ContentPage.Content>
+        <Grid Margin="{OnPlatform iOS='0,50,0,0', Android='0'}" SafeAreaEdges="{OnPlatform iOS='None', Android='All'}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="40" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="60" />
+            </Grid.RowDefinitions>
+
+            <controls:CustomHeader Grid.Row="0" />
+
+            <StackLayout
+                Grid.Row="1"
+                Margin="0,0,0,0"
+                Orientation="Vertical"
+                Spacing="0"
+                VerticalOptions="Start">
+                <StackLayout
+                    Margin="0,0,0,0"
+                    HorizontalOptions="Start"
+                    Orientation="Horizontal"
+                    VerticalOptions="Center">
+                    <StackLayout
+                        Margin="0,0,0,0"
+                        Orientation="Vertical"
+                        Spacing="0"
+                        VerticalOptions="Start"
+                        WidthRequest="225" />
+                    <StackLayout
+                        Margin="0,15,0,0"
+                        HorizontalOptions="Start"
+                        Orientation="Horizontal"
+                        VerticalOptions="Center">
+                        <Button
+                            x:Name="btnCheckout"
+                            Margin="0"
+                            Padding="0"
+                            BackgroundColor="Blue"
+                            Clicked="btnCheckout_Clicked"
+                            Command="{Binding OpenCheckout}"
+                            CornerRadius="10"
+                            FontAttributes="Bold"
+                            FontSize="14"
+                            HeightRequest="35"
+                            HorizontalOptions="Start"
+                            Text="Print Labels"
+                            TextColor="White"
+                            VerticalOptions="Start"
+                            WidthRequest="130" />
+                    </StackLayout>
+                </StackLayout>
+                <StackLayout
+                    Margin="0,0,0,0"
+                    HorizontalOptions="Center"
+                    Orientation="Horizontal"
+                    VerticalOptions="Center">
+                    <Label
+                        Margin="0,15,0,5"
+                        BackgroundColor="White"
+                        FontAttributes="Bold"
+                        FontSize="20"
+                        HorizontalOptions="Center"
+                        Text="Items"
+                        TextColor="Blue" />
+                    <ImageButton
+                        x:Name="btnClearCart"
+                        Margin="40,10,0,10"
+                        BackgroundColor="Transparent"
+                        Clicked="btnClearCart_Clicked"
+                        HeightRequest="30"
+                        HorizontalOptions="Center"
+                        Source="delete.png"
+                        VerticalOptions="Center"
+                        WidthRequest="30" />
+                </StackLayout>
+                <BoxView
+                    BackgroundColor="gray"
+                    HeightRequest="3"
+                    HorizontalOptions="Fill"
+                    VerticalOptions="Fill"
+                    Color="lightgray" />
+                <CollectionView x:Name="lstDevices" />
+                <CollectionView x:Name="ItemsListCart" SelectionMode="None">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <controls:CustomListCreditItem x:Name="CustomListLabelItem" Grid.Row="0" />
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </StackLayout>
+
+            <controls:CustomToolbar Grid.Row="2" />
+        </Grid>
+    </ContentPage.Content>
+</ContentPage>

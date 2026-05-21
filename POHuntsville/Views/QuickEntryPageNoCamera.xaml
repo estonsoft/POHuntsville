@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="POHuntsville.Views.QuickEntryPageNoCamera"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:ffimageloading="clr-namespace:FFImageLoading.Maui;assembly=FFImageLoading.Maui"
+    xmlns:controls="clr-namespace:POHuntsville.Controls"
+    xmlns:d="http://xamarin.com/schemas/2014/forms/design"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Quick Entry"
+    BackgroundColor="White"
+    Shell.NavBarIsVisible="False"
+    mc:Ignorable="d">
+
+    <ContentPage.Content>
+        <Grid Margin="{OnPlatform iOS='0,50,0,0', Android='0'}" SafeAreaEdges="{OnPlatform iOS='None', Android='All'}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="40" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="60" />
+            </Grid.RowDefinitions>
+
+            <controls:CustomHeader Grid.Row="0" />
+
+            <ScrollView Grid.Row="1">
+                <StackLayout
+                    Padding="0,10,0,0"
+                    BackgroundColor="White"
+                    VerticalOptions="Start">
+                    <StackLayout
+                        x:Name="TapToScan"
+                        Margin="5,30,0,55"
+                        HorizontalOptions="Center"
+                        IsVisible="false">
+                        <StackLayout.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnScannerEnable" />
+                        </StackLayout.GestureRecognizers>
+                        <Label
+                            Padding="0,0,0,0"
+                            FontAttributes="Bold"
+                            FontFamily="FontAwesomePro6Regular"
+                            FontSize="48"
+                            HorizontalOptions="Center"
+                            Text="&#xF030;"
+                            TextColor="Red"
+                            VerticalOptions="Center" />
+                        <Label
+                            Margin="0,0,0,0"
+                            FontAttributes="Bold"
+                            FontSize="20"
+                            HorizontalOptions="Center"
+                            Text="Tap To Scan"
+                            TextColor="Red"
+                            VerticalOptions="Center" />
+                    </StackLayout>
+                    <StackLayout
+                        x:Name="ScanRow"
+                        Margin="0,40,0,0"
+                        HorizontalOptions="Center"
+                        Orientation="Horizontal"
+                        VerticalOptions="Center">
+                        <Entry
+                            x:Name="ScanItem"
+                            Margin="0,0,0,0"
+                            Completed="ScanItem_Completed"
+                            FontSize="18"
+                            HeightRequest="45"
+                            HorizontalOptions="Start"
+                            Keyboard="Numeric"
+                            Placeholder="Item # or UPC"
+                            PlaceholderColor="Gray"
+                            VerticalOptions="Center"
+                            WidthRequest="200" />
+                        <Button
+                            x:Name="EnterButton"
+                            Margin="10,0,0,0"
+                            BackgroundColor="RoyalBlue"
+                            Clicked="EnterButton_Clicked"
+                            CornerRadius="10"
+                            FontAttributes="Bold"
+                            FontSize="14"
+                            HeightRequest="35"
+                            HorizontalOptions="Start"
+                            Text="  Enter  "
+                            TextColor="White"
+                            TextTransform="None" />
+                        <Label
+                            x:Name="Message"
+                            Margin="0,5,0,0"
+                            BackgroundColor="White"
+                            FontSize="16"
+                            HorizontalOptions="Center"
+                            IsVisible="false"
+                            TextColor="Red" />
+                    </StackLayout>
+                    <CollectionView
+                        x:Name="ItemsListSearch"
+                        Margin="0,30,0,0"
+                        SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <controls:CustomListItem x:Name="CustomListItem" Grid.Row="0" />
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </StackLayout>
+            </ScrollView>
+
+            <controls:CustomToolbar Grid.Row="2" />
+        </Grid>
+    </ContentPage.Content>
+</ContentPage>

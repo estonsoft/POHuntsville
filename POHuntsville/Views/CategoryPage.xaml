@@ -1,0 +1,109 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="POHuntsville.Views.CategoryPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:ffimageloading="clr-namespace:FFImageLoading.Maui;assembly=FFImageLoading.Maui"
+    xmlns:controls="clr-namespace:POHuntsville.Controls"
+    
+    
+    xmlns:ios="http://schemas.microsoft.com/dotnet/2021/maui/ios"
+    xmlns:modal="clr-namespace:POHuntsville"
+    
+    x:Name="CategoriesPage"
+    Title="Product Categories">
+
+    <Shell.SearchHandler>
+        <controls:MySearchHandler
+            DisplayMemberName="Name"
+            Placeholder="Search Products"
+            ShowsResults="false" />
+    </Shell.SearchHandler>
+
+    <ContentPage.Content>
+        <Grid Margin="{OnPlatform iOS='0,50,0,0', Android='0'}" SafeAreaEdges="{OnPlatform iOS='None', Android='All'}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="40" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <controls:CustomHeader Grid.Row="0" />
+
+            <CollectionView
+                x:Name="CategoriesListSearch"
+                Grid.Row="1"
+                SelectionChanged="CategoriesListSearch_ItemTapped"
+                SelectionMode="Single">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="modal:Category">
+                        <!--  Use a plain layout as the DataTemplate content for MAUI  -->
+                        <VerticalStackLayout
+                            Margin="0,0,0,0"
+                            Spacing="0"
+                            VerticalOptions="Start">
+                            <Label
+                                Margin="0,0,0,0"
+                                BackgroundColor="Aqua"
+                                IsVisible="False"
+                                Text="{Binding Code}" />
+                            <HorizontalStackLayout
+                                Margin="20,5,0,0"
+                                HorizontalOptions="Start"
+                                VerticalOptions="Center">
+                               <ffimageloading:CachedImage 
+                                    Margin="5,5,5,5"
+                                    Aspect="AspectFit"
+                                    ErrorPlaceholder="missing_item.jpg"
+                                    HeightRequest="90"
+                                    HorizontalOptions="Fill"
+                                    LoadingPlaceholder="missing_item.jpg"
+                                    Source="{Binding ImageURL}"
+                                    VerticalOptions="Fill"
+                                    WidthRequest="90" />
+                                <StackLayout
+                                    Margin="0,0,0,0"
+                                    HorizontalOptions="Start"
+                                    Orientation="Vertical"
+                                    VerticalOptions="Center">
+                                    <Label
+                                        Margin="5,0,0,0"
+                                        BackgroundColor="White"
+                                        FontAttributes="Bold"
+                                        FontSize="16"
+                                        HorizontalOptions="Start"
+                                        LineBreakMode="WordWrap"
+                                        Text="{Binding Description}"
+                                        TextColor="Blue"
+                                        VerticalOptions="Start" />
+                                </StackLayout>
+                            </HorizontalStackLayout>
+                            <BoxView
+                                HeightRequest="3"
+                                HorizontalOptions="Fill"
+                                IsVisible="false"
+                                VerticalOptions="Fill"
+                                Color="LightGray" />
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroupList>
+                                    <VisualStateGroup Name="CommonStates">
+                                        <!--  Normal State  -->
+                                        <VisualState Name="Normal" />
+
+                                        <!--  Selected State  -->
+                                        <VisualState Name="Selected">
+                                            <VisualState.Setters>
+                                                <Setter Property="BackgroundColor" Value="LightGray" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateGroupList>
+                            </VisualStateManager.VisualStateGroups>
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <controls:CustomToolbar Grid.Row="2" />
+        </Grid>
+    </ContentPage.Content>
+</ContentPage>

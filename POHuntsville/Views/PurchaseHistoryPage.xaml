@@ -1,0 +1,216 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="POHuntsville.Views.PurchaseHistoryPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:POHuntsville.Controls"
+    xmlns:ffimageloading="clr-namespace:FFImageLoading.Maui;assembly=FFImageLoading.Maui"
+    xmlns:local="clr-namespace:POHuntsville.ViewModels"
+    Title="Order History"
+    Shell.NavBarIsVisible="False">
+
+    <NavigationPage.TitleView>
+        <StackLayout
+            Orientation="Horizontal"
+            Spacing="10"
+            VerticalOptions="Center">
+
+            <Label
+                Padding="10,0,0,0"
+                FontSize="16"
+                Text="Profit Order"
+                TextColor="White"
+                VerticalTextAlignment="Center" />
+        </StackLayout>
+    </NavigationPage.TitleView>
+
+    <Shell.SearchHandler>
+        <controls:MySearchHandler
+            DisplayMemberName="Name"
+            Placeholder="Search Products"
+            ShowsResults="false" />
+    </Shell.SearchHandler>
+
+    <ContentPage.BindingContext>
+        <local:ItemSearchViewModel />
+    </ContentPage.BindingContext>
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Color x:Key="BannerBackground">White</Color>
+            <Color x:Key="Accent">#96d1ff</Color>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ContentPage.Content>
+        <Grid Margin="{OnPlatform iOS='0,50,0,0', Android='0'}" SafeAreaEdges="{OnPlatform iOS='None', Android='All'}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <controls:CustomHeader Grid.Row="0" />
+
+            <BoxView
+                Grid.Row="1"
+                BackgroundColor="gray"
+                HeightRequest="3"
+                HorizontalOptions="Fill"
+                VerticalOptions="Fill"
+                Color="lightgray" />
+            <CollectionView
+                x:Name="OrderHistoryList"
+                Grid.Row="2"
+                SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <!--
+                            2-Column layout using Grid:
+                            Column 0 (*):    Order #, Items, Pieces, Total  (left)
+                            Column 1 (Auto): Date, PDF icon, View Details   (right)
+                        -->
+                        <Grid Margin="16,12,16,0" ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!--
+                                ═══════════════════════════════════════
+                                LEFT COLUMN — Order info
+                                ════════════════════════════════════════
+                            -->
+                            <StackLayout
+                                Grid.Column="0"
+                                Spacing="6"
+                                VerticalOptions="Center">
+
+                                <!--  Order #  -->
+                                <StackLayout Orientation="Horizontal" Spacing="4">
+                                    <Label
+                                        FontSize="14"
+                                        Text="Order #"
+                                        TextColor="DimGray"
+                                        VerticalOptions="Center" />
+                                    <Label
+                                        FontAttributes="Bold"
+                                        FontSize="16"
+                                        Text="{Binding OrderNo}"
+                                        TextColor="Black"
+                                        VerticalOptions="Center" />
+                                </StackLayout>
+
+                                <!--  Items  -->
+                                <StackLayout Orientation="Horizontal" Spacing="4">
+                                    <Label
+                                        FontAttributes="Bold"
+                                        FontSize="16"
+                                        Text="{Binding Items}"
+                                        TextColor="Black"
+                                        VerticalOptions="Center" />
+                                    <Label
+                                        FontSize="14"
+                                        Text="Items"
+                                        TextColor="DimGray"
+                                        VerticalOptions="Center" />
+                                </StackLayout>
+
+                                <!--  Pieces  -->
+                                <StackLayout Orientation="Horizontal" Spacing="4">
+                                    <Label
+                                        FontAttributes="Bold"
+                                        FontSize="16"
+                                        Text="{Binding Pieces}"
+                                        TextColor="Black"
+                                        VerticalOptions="Center" />
+                                    <Label
+                                        FontSize="14"
+                                        Text="Pieces"
+                                        TextColor="DimGray"
+                                        VerticalOptions="Center" />
+                                </StackLayout>
+
+                                <!--  Total  -->
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontSize="16"
+                                    Text="{Binding TotalDisplay}"
+                                    TextColor="Black" />
+
+                            </StackLayout>
+
+                            <!--
+                                ═══════════════════════════════════════
+                                RIGHT COLUMN — Date, PDF, View Details
+                                ════════════════════════════════════════
+                            -->
+                            <StackLayout
+                                Grid.Column="1"
+                                HorizontalOptions="End"
+                                Spacing="6"
+                                VerticalOptions="Center">
+
+                                <!--  Order Date  -->
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontSize="14"
+                                    HorizontalOptions="End"
+                                    Text="{Binding OrderDateDisplay}"
+                                    TextColor="Black" />
+
+                                <!--  PDF Icon  -->
+                                <controls:OrderImage
+                                    HeightRequest="44"
+                                    HorizontalOptions="End"
+                                    OrderNo="{Binding OrderNo}"
+                                    Source="pdf.png"
+                                    WidthRequest="44">
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="TapGestureRecognizer_Tapped" />
+                                    </Image.GestureRecognizers>
+                                </controls:OrderImage>
+
+                                <!--  View Details  -->
+                                <controls:OrderLabel
+                                    FontSize="13"
+                                    HorizontalOptions="End"
+                                    OrderNo="{Binding OrderNo}"
+                                    Text="View Details"
+                                    TextColor="Blue"
+                                    VerticalOptions="Center">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnTappedDetails" />
+                                    </Label.GestureRecognizers>
+                                </controls:OrderLabel>
+
+                            </StackLayout>
+
+                            <!--  Full-width divider spanning both columns  -->
+                            <BoxView
+                                Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                Margin="0,30,0,0"
+                                HeightRequest="1"
+                                HorizontalOptions="Fill"
+                                VerticalOptions="End"
+                                Color="LightGray" />
+
+                        </Grid>
+                    </DataTemplate>
+
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+            <controls:CustomToolbar Grid.Row="3" />
+            <ActivityIndicator
+                x:Name="loading"
+                Grid.Row="1"
+                Grid.RowSpan="4"
+                HorizontalOptions="Center"
+                IsRunning="False"
+                IsVisible="False"
+                VerticalOptions="Center" />
+        </Grid>
+    </ContentPage.Content>
+</ContentPage>
