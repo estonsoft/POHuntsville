@@ -16,12 +16,12 @@
             base.OnDisappearing();
         }
 
-        protected override void OnAppearing()
+        protected override async void OnAppearing()
         {
             base.OnAppearing();
 
-            //Database db = new Database();
-            List<Item> lstCartItems = App.g_db.GetOrderCartItems();
+
+            List<Item> lstCartItems = await App.g_db.GetOrderCartItems();
             String sOrderInfo = "";
 
             foreach (Item item in lstCartItems)

@@ -27,11 +27,9 @@ namespace POHuntsville.Data
             content.Headers.Add("Content-Type", "text/xml; charset=utf-8");
             content.Headers.Add("SOAPAction", soapAction);
 
-            var response = await _httpClient.PostAsync(SoapUrl, content);
+            using var response = await _httpClient.PostAsync(SoapUrl, content);
             response.EnsureSuccessStatusCode();
             string responseValue = await response.Content.ReadAsStringAsync();
-            Console.WriteLine("Request" + SoapUrl);
-            Console.WriteLine("Response" + responseValue);
             responseValue = ExtractSoapResult(responseValue);
             return responseValue;
         }

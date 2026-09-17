@@ -7,6 +7,10 @@ using Scandit.DataCapture.Core.UI.Maui;
 using SQLitePCL;
 using Syncfusion.Maui.Core.Hosting;
 using POHuntsville.Data;
+using BarcodeScanning;
+#if MAUI_DEVFLOW
+using Microsoft.Maui.DevFlow.Agent;
+#endif
 namespace POHuntsville
 {
     public static class MauiProgram
@@ -14,9 +18,13 @@ namespace POHuntsville
         public static MauiApp CreateMauiApp()
         {
             var builder = MauiApp.CreateBuilder();
+#if MAUI_DEVFLOW
+            builder.AddMauiDevFlowAgent();
+#endif
             builder
                 .UseMauiApp<App>()
                 .UseMauiPdfView()
+                .UseBarcodeScanning()
                 .ConfigureSyncfusionCore()
                 .UseFFImageLoading()
                 .UseScanditCore()
@@ -37,7 +45,7 @@ namespace POHuntsville
 
                 .ConfigureFonts(fonts =>
                 {
-                    
+
                     //fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("Font Awesome 5 Brands-Regular-400.otf", "FontAwesomeBrandsReg");
                     fonts.AddFont("Font Awesome 5 Free-Regular-400.otf", "FontAwesomeFreeReg");
@@ -63,13 +71,16 @@ namespace POHuntsville
             // ✅ REQUIRED
             builder.Services.AddSingleton<ISoapService>(sp =>
             {
-                var httpClient = new HttpClient();
+                var httpClient = new HttpClient
+                {
+                    Timeout = TimeSpan.FromMinutes(5)
+                };
                 return new SoapService(httpClient);
             });
 
             // Optional manager
             builder.Services.AddSingleton<CommManager>();
-           
+
             return builder.Build();
         }
     }

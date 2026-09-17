@@ -33,11 +33,11 @@
                 App.g_HoldForReview = value;
                 if (App.g_HoldForReview)
                 {
-                    App.g_db.SaveSetting("HoldForReview", "1");
+                    _ = App.g_db.SaveSetting("HoldForReview", "1");
                 }
                 else
                 {
-                    App.g_db.SaveSetting("HoldForReview", "0");
+                    _ = App.g_db.SaveSetting("HoldForReview", "0");
                 }
                 OnPropertyChanged();
             }
@@ -184,16 +184,8 @@
                 CompanyCityStateZip = "";
             }
 
-            //Database db = new Database();
-            _Location = App.g_db.GetLocation(App.g_Customer.Warehouse);
 
-            try
-            {
-                LocationName = _Location.Name;
-                LocationAddress = _Location.Address;
-                LocationCityStateZip = _Location.CityStateZip;
-            }
-            catch { }
+            _ = InitializeLocationAsync();
 
             if (App.g_IsSalesUser || App.g_IsChainManager)
             {
@@ -202,6 +194,18 @@
                 Pickup.IsVisible = false;
                 IsDeliveryHighlighted = true;
                 IsPickupHighlighted = false;
+            }
+        }
+
+        private async Task InitializeLocationAsync()
+        {
+            _Location = await App.g_db.GetLocation(App.g_Customer.Warehouse);
+
+            if (_Location != null)
+            {
+                LocationName = _Location.Name;
+                LocationAddress = _Location.Address;
+                LocationCityStateZip = _Location.CityStateZip;
             }
         }
 
@@ -215,7 +219,7 @@
             await Shell.Current.GoToAsync("PaymentMethodPage");
         }
 
-        protected override void OnAppearing()
+        protected override async void OnAppearing()
         {
             base.OnAppearing();
             //_viewModel.OnAppearing();
@@ -263,8 +267,8 @@
         {
             ItemsListCart.ItemsSource = null;
 
-            //Database db = new Database();
-            ItemsListCart.ItemsSource = App.g_db.GetOrderCartItems();
+
+            ItemsListCart.ItemsSource = await App.g_db.GetOrderCartItems();
 
             foreach (Item i in (List<Item>)ItemsListCart.ItemsSource)
             {

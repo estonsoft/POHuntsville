@@ -1,70 +1,72 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Globalization;
 
 namespace POHuntsville
 {
     internal class XMLResponseParser
     {
-        public static void commService_GetBannersCompleted(String response)
+        public static async Task commService_GetBannersCompleted(String response)
         {
             try
             {
-                Debug.WriteLine("Get Banners returned");
-
+                Console.WriteLine("Get Banners returned");
                 String sBanners = response;
                 String[] aBanners = sBanners.Split('|');
+                ConcurrentBag<Banner> lstBanners = new ConcurrentBag<Banner>();
                 if (aBanners.Length >= 1)
                 {
-                    //Database db = new Database();
-
-                    App.g_db.BeginTransaction();
-                    App.g_db.DeleteBannersAsync();
-
-                    foreach (String s in aBanners)
+                    // foreach (String s in aBanners)
+                    // {
+                    Parallel.ForEach(aBanners, s =>
                     {
                         Banner banner = new Banner();
                         banner.BannerName = s;
                         banner.BannerURL = Constants.BannerUrl + banner.BannerName;
-
-                        try
-                        {
-                            App.g_db.SaveBannerAsync(banner);
-                        }
-                        catch (Exception ex)
-                        {
-                            String sMsg = ex.Message;
-                        }
-                    }
-
-                    App.g_db.CommitTransaction();
+                        lstBanners.Add(banner);
+                    });
                 }
+                try
+                {
 
-                App.CommManager.GetCategoriesAndSubcategoriesCust(App.g_Customer.CustNo);
+                    await App.g_db.DeleteBannersAsync();
+                    await App.g_db.SaveBannerAsync(lstBanners.ToList());
+
+                    Console.WriteLine("Get Banners returned Completed");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error occurred while saving banners: " + ex.Message);
+                }
+                await App.CommManager.GetCategoriesAndSubcategoriesCust(App.g_Customer.CustNo);
             }
             catch (Exception ex)
             {
+                Console.WriteLine("Get Banners Error");
+                Console.WriteLine(ex.Message);
             }
         }
 
 
-        public static void commService_GetCategoriesAndSubcategoriesCompleted(String response)
+        public static async Task commService_GetCategoriesAndSubcategoriesCompleted(String response)
         {
-            Debug.WriteLine("Get Categories and Subcategories returned");
+            Console.WriteLine("Get Categories and Subcategories returned");
 
             try
             {
                 String sCategories = response;
                 String[] aCategories = sCategories.Split('~');
-                List<Category> categories = new List<Category>();
-                List<Subcategory> subcategories = new List<Subcategory>();
+                ConcurrentBag<Category> lstCategories = new ConcurrentBag<Category>();
+                ConcurrentBag<Subcategory> lstSubcategories = new ConcurrentBag<Subcategory>();
                 if (aCategories.Length > 1)
                 {
-                    foreach (String s in aCategories)
+                    Parallel.ForEach(aCategories, s =>
                     {
                         String[] aCategory = s.Split("|");
 
                         if (aCategory.Count() < 4)
                         {
-                            continue;
+                            return; // Skip this iteration if there are not enough elements
                         }
 
                         if (aCategory[1].Length == 0)
@@ -73,9 +75,9 @@ namespace POHuntsville
                             cat.Code = aCategory[0];
                             cat.Description = aCategory[2].Trim();
                             cat.ImageURL = Constants.CategoryImageUrl + cat.Code + ".png";
-                            cat.Rank = Convert.ToInt32(aCategory[3].Trim());
-                            cat.HomePage = Convert.ToInt32(aCategory[4].Trim());
-                            categories.Add(cat);
+                            cat.Rank = GetIntegerValue("Category rank", aCategory[3], 0);
+                            cat.HomePage = GetIntegerValue("Category home page", aCategory[4], 0);
+                            lstCategories.Add(cat);
                         }
                         else
                         {
@@ -83,20 +85,25 @@ namespace POHuntsville
                             subcat.Category = aCategory[0];
                             subcat.Code = aCategory[1];
                             subcat.Description = aCategory[2].Trim();
-                            subcat.Rank = Convert.ToInt32(aCategory[3].Trim());
-                            subcategories.Add(subcat);
+                            subcat.Rank = GetIntegerValue("Subcategory rank", aCategory[3], 0);
+                            lstSubcategories.Add(subcat);
                         }
+                    });
+                    try
+                    {
+
+                        await App.g_db.DeleteAllCategory();
+                        await App.g_db.DeleteAllSubcategory();
+                        await App.g_db.SaveCategory(lstCategories.ToList());
+                        await App.g_db.SaveSubcategory(lstSubcategories.ToList());
+
+                        Console.WriteLine("Get Categories and Subcategories returned Completed");
+                        App.g_HomePageCategoryList = await App.g_db.GetHomePageCategories();
                     }
-                    App.g_db.BeginTransaction();
-
-                    App.g_db.DeleteCategories();
-                    App.g_db.DeleteSubcategories();
-                    App.g_db.SaveCategory(categories);
-                    App.g_db.SaveSubcategory(subcategories);
-
-                    App.g_HomePageCategoryList = App.g_db.GetHomePageCategories();
-
-                    App.g_db.CommitTransaction();
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error occurred while parsing categories and subcategories: " + ex.Message);
+                    }
                 }
 
                 try
@@ -106,61 +113,55 @@ namespace POHuntsville
                     {
                         CustNo = App.g_Customer.CustNo;
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        Console.WriteLine("Error occurred while parsing customer number: " + ex.Message);
                         CustNo = "0";
                     }
 
                     //Database db = new Database();
-                    string sDate = App.g_db.GetSetting("LastUpdateItems");
-
-                    if (sDate == "")
-                    {
-                        sDate = "0";
-                    }
-
-                    // for now always refresh all items
-                    sDate = "0";
+                    string sDate = "0";
                     if (App.g_Customer.CustNo == "0")
                     {
-                        App.CommManager.GetItems("0", sDate);
+                        await App.CommManager.GetItems("0", sDate);
                     }
                     else
                     {
-                        App.CommManager.GetItems(App.g_Customer.CustNo, sDate);
+                        await App.CommManager.GetItems(App.g_Customer.CustNo, sDate);
                     }
                 }
-                catch (Exception ex)
+                catch (Exception e)
                 {
+                    Console.WriteLine("Fetch Items Categories and SubCategories" + e.Message);
                 }
             }
             catch (Exception ex)
             {
+                Console.WriteLine("SAVE Categories and SubCategories" + ex.Message);
             }
         }
 
-        public static void commService_GetCategoriesAndSubcategoriesCustCompleted(String response)
+        public static async Task commService_GetCategoriesAndSubcategoriesCustCompleted(String response)
         {
-            Debug.WriteLine("Get Categories and Subcategories Cust returned");
+            Console.WriteLine("Get Categories Subcategories and Subsubcategories Cust returned");
 
             try
             {
-                List<Category> categories = new List<Category>();
-                List<Subcategory> subcategories = new List<Subcategory>();
-                List<Subsubcategory> subsubcategories = new List<Subsubcategory>();
-
                 String sCategories = response;
                 String[] aCategories = sCategories.Split('~');
+                ConcurrentBag<Category> lstCategories = new ConcurrentBag<Category>();
+                ConcurrentBag<Subcategory> lstSubcategories = new ConcurrentBag<Subcategory>();
+                ConcurrentBag<Subsubcategory> lstSubsubcategories = new ConcurrentBag<Subsubcategory>();
 
                 if (aCategories.Length > 1)
                 {
-                    foreach (String s in aCategories)
+                    Parallel.ForEach(aCategories, s =>
                     {
                         String[] aCategory = s.Split("|");
 
                         if (aCategory.Count() < 4)
                         {
-                            continue;
+                            return; // Skip this iteration if there are not enough elements
                         }
 
                         string sSubsubcategory;
@@ -168,8 +169,9 @@ namespace POHuntsville
                         {
                             sSubsubcategory = aCategory[5];
                         }
-                        catch
+                        catch (Exception ex)
                         {
+                            Console.WriteLine("Error occurred while parsing subsubcategory: " + ex.Message);
                             sSubsubcategory = "";
                         }
 
@@ -179,9 +181,9 @@ namespace POHuntsville
                             cat.Code = aCategory[0];
                             cat.Description = aCategory[2].Trim();
                             cat.ImageURL = Constants.CategoryImageUrl + cat.Code + ".png";
-                            cat.Rank = Convert.ToInt32(aCategory[3].Trim());
-                            cat.HomePage = Convert.ToInt32(aCategory[4].Trim());
-                            categories.Add(cat);
+                            cat.Rank = GetIntegerValue("Category rank", aCategory[3], 0);
+                            cat.HomePage = GetIntegerValue("Category home page", aCategory[4], 0);
+                            lstCategories.Add(cat);
                         }
                         else if (sSubsubcategory.Length == 0)  // no subsubcat, just add subcategory
                         {
@@ -189,8 +191,8 @@ namespace POHuntsville
                             subcat.Category = aCategory[0];
                             subcat.Code = aCategory[1];
                             subcat.Description = aCategory[2].Trim();
-                            subcat.Rank = Convert.ToInt32(aCategory[3].Trim());
-                            subcategories.Add(subcat);
+                            subcat.Rank = GetIntegerValue("Subcategory rank", aCategory[3], 0);
+                            lstSubcategories.Add(subcat);
                         }
                         else // add subsubcategory
                         {
@@ -199,99 +201,90 @@ namespace POHuntsville
                             subsubcat.Subcategory = aCategory[1];
                             subsubcat.Code = sSubsubcategory;
                             subsubcat.Description = aCategory[2].Trim();
-                            subsubcat.Rank = Convert.ToInt32(aCategory[3].Trim());
-                            subsubcategories.Add(subsubcat);
+                            subsubcat.Rank = GetIntegerValue("Subsubcategory rank", aCategory[3], 0);
+                            lstSubsubcategories.Add(subsubcat);
                         }
-                    }
+                    });
+                }
+                try
+                {
+
+                    await App.g_db.DeleteAllCategory();
+                    await App.g_db.DeleteAllSubcategory();
+                    await App.g_db.DeleteAllSubsubcategory();
+                    await App.g_db.SaveCategory(lstCategories.ToList());
+                    await App.g_db.SaveSubcategory(lstSubcategories.ToList());
+                    await App.g_db.SaveSubsubcategory(lstSubsubcategories.ToList());
+
+                    Console.WriteLine("Get Categories Subcategories and Subsubcategories returned Completed");
+                    App.g_HomePageCategoryList = await App.g_db.GetHomePageCategories();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error occurred while parsing categories subcategories and subsubcategories: " + ex.Message);
                 }
 
                 try
                 {
-                    App.g_db.BeginTransaction();
-                    App.g_db.DeleteCategories();
-                    App.g_db.DeleteSubcategories();
-                    App.g_db.DeleteSubsubcategories();
-                    App.g_db.SaveCategory(categories);
-                    App.g_db.SaveSubcategory(subcategories);
-                    App.g_db.SaveSubsubcategory(subsubcategories);
-
+                    Console.WriteLine("Get Categories Subcategories and Subsubcategories Cust returned Completed");
                     String CustNo = "0";
                     try
                     {
                         CustNo = App.g_Customer.CustNo;
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        Console.WriteLine("Error occurred while parsing customer number: " + ex.Message);
                         CustNo = "0";
                     }
 
                     //Database db = new Database();
-                    string sDate = App.g_db.GetSetting("LastUpdateItems");
-
-                    if (sDate == "")
-                    {
-                        sDate = "0";
-                    }
-
-                    // for now always refresh all items
-                    sDate = "0";
+                    string sDate = "0";
                     if (App.g_Customer.CustNo == "0")
                     {
-                        App.CommManager.GetItems("0", sDate);
+                        await App.CommManager.GetItems("0", sDate);
                     }
                     else
                     {
-                        App.CommManager.GetItems(App.g_Customer.CustNo, sDate);
+                        await App.CommManager.GetItems(App.g_Customer.CustNo, sDate);
                     }
-                    App.g_HomePageCategoryList = App.g_db.GetHomePageCategories();
-                    App.g_db.CommitTransaction();
+                    App.g_HomePageCategoryList = await App.g_db.GetHomePageCategories();
                 }
-                catch (Exception ex)
+                catch (Exception e)
                 {
-                    Debug.WriteLine("Fetch Items Categories and SubCategories" + ex.Message);
+                    Console.WriteLine("Fetch Items Categories and SubCategories" + e.Message);
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("SAVE Categories and SubCategories" + ex.Message);
+                Console.WriteLine("SAVE Categories and SubCategories" + ex.Message);
             }
         }
 
-        public static void commService_GetItemsCompletedAsync(String response)
+        public static async Task commService_GetItemsCompletedAsync(String response)
         {
             try
             {
-                Debug.WriteLine(DateTime.Now.ToString() + " - Get Items returned");
-
+                Console.WriteLine(DateTime.Now.ToString() + " - Get Items returned");
                 String sItems = response;
                 String[] aItems = sItems.Split('~');
                 if (aItems.Length > 1)
                 {
-                    App.g_db.BeginTransaction();
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
 
-                    App.g_db.InsertDiscontinuedItems();
+                    List<Item> lstCartItems = await App.g_db.GetCartItems();
+                    var cartDict = lstCartItems.ToDictionary(c => c.ItemNo); // O(1) lookup instead of nested loop
 
-                    List<Item> lstCartItems = App.g_db.GetCartItems();
+                    var itemsToSave = new ConcurrentBag<Item>();
+                    var processedItemNos = new ConcurrentBag<int>();
 
-                    foreach (String s in aItems)
+                    Parallel.ForEach(aItems, s =>
                     {
+                        if (string.IsNullOrWhiteSpace(s)) return; // Skip empty rows
                         String[] aItem = s.Split("|");
 
-                        if (aItem.Count() < 20)
-                        {
-                            continue;
-                        }
-
                         Item item = new Item();
-                        try
-                        {
-                            item.ItemNo = Convert.ToInt32(aItem[0]);
-                        }
-                        catch (Exception ex)
-                        {
-                            String sMsg = ex.Message;
-                            continue;
-                        }
+                        item.ItemNo = GetIntegerValue("ItemNo", aItem[0], 0);
                         item.ItemNoDisplay = aItem[0];
                         item.Description = aItem[1].Trim();
                         item.ImageURL = Constants.ItemImageUrl + item.ItemNo.ToString() + ".jpg";
@@ -315,70 +308,21 @@ namespace POHuntsville
                         item.UPC_4 = aItem[11].Trim();
                         item.RetailUOM = aItem[12].Trim();
                         item.RetailSize = aItem[13].Trim();
-                        try
-                        {
-                            item.RetailPrice = Convert.ToDecimal(aItem[14].Trim());
-                        }
-                        catch
-                        {
-                            item.RetailPrice = 0;
-                        }
+                        item.RetailPrice = GetDecimalValue("RetailPrice", aItem[14], 0);
                         item.RetailPriceDisplay = aItem[14].Trim();
                         item.UOM = aItem[15].Trim();
                         item.SizeUOM = "/" + item.UOM;
-                        try
-                        {
-                            item.Size = Convert.ToInt32(aItem[16].Trim());
-                        }
-                        catch
-                        {
-                            item.Size = 1;
-                        }
+                        item.Size = GetIntegerValue("Size", aItem[16], 1);
                         item.SizeDisplay = aItem[16].Trim();
                         item.Form = aItem[17].Trim();
-                        try
-                        {
-                            item.Price = Convert.ToDecimal(aItem[18].Trim());
-                        }
-                        catch
-                        {
-                            item.Price = 0;
-                        }
+                        item.Price = GetDecimalValue("Price", aItem[18], 0);
                         item.PriceDisplay = string.Format("{0:C}", item.Price);
-                        try
-                        {
-                            item.Tax = Convert.ToDecimal(aItem[19].Trim());
-                        }
-                        catch
-                        {
-                            item.Tax = 0;
-                        }
+                        item.Tax = GetDecimalValue("Tax", aItem[19], 0);
                         item.TaxDisplay = string.Format("{0:C}", item.Tax);
-                        try
-                        {
-                            item.CategoryRank = Convert.ToInt32(aItem[20].Trim());
-                        }
-                        catch
-                        {
-                            item.CategoryRank = 0;
-                        }
-                        try
-                        {
-                            item.SellUnitsInPurchaseUnit = Convert.ToInt32(aItem[21].Trim());
-                        }
-                        catch
-                        {
-                            item.SellUnitsInPurchaseUnit = 1;
-                        }
+                        item.CategoryRank = GetIntegerValue("CategoryRank", aItem[20], 0);
+                        item.SellUnitsInPurchaseUnit = GetIntegerValue("SellUnitsInPurchaseUnit", aItem[21], 1);
                         item.Status = aItem[22];
-                        try
-                        {
-                            item.QOH = Convert.ToInt32(aItem[23].Trim());
-                        }
-                        catch
-                        {
-                            item.QOH = 0;
-                        }
+                        item.QOH = GetIntegerValue("QOH", aItem[23], 0);
                         try
                         {
                             item.IsNew = false;
@@ -404,15 +348,11 @@ namespace POHuntsville
                                 item.AddedDateDisplay += aItem[25].Substring(1, 2);
                             }
                         }
-                        catch { }
-                        try
+                        catch (Exception e)
                         {
-                            item.AllocationQty = Convert.ToInt32(aItem[26].Trim());
+                            Console.WriteLine("Error occurred while parsing added date: " + e.Message);
                         }
-                        catch
-                        {
-                            item.AllocationQty = 0;
-                        }
+                        item.AllocationQty = GetIntegerValue("AllocationQty", aItem[26], 0);
                         try
                         {
                             if (aItem[27] == "1")
@@ -424,8 +364,9 @@ namespace POHuntsville
                                 item.IsPriceVisible = 1;
                             }
                         }
-                        catch
+                        catch (Exception e)
                         {
+                            Console.WriteLine("Error occurred while parsing price visibility: " + e.Message);
                             item.IsPriceVisible = 1;
                         }
 
@@ -435,8 +376,9 @@ namespace POHuntsville
                             item.Keyword2 = aItem[29];
                             item.Keyword3 = aItem[30];
                         }
-                        catch
+                        catch (Exception e)
                         {
+                            Console.WriteLine("Error occurred while parsing keywords: " + e.Message);
                             item.Keyword1 = "";
                             item.Keyword2 = "";
                             item.Keyword3 = "";
@@ -446,51 +388,52 @@ namespace POHuntsville
                         {
                             item.LastPurchDateDisplay = aItem[31];
                         }
-                        catch
+                        catch (Exception e)
                         {
+                            Console.WriteLine("Error occurred while parsing last purchase date display: " + e.Message);
                             item.LastPurchDateDisplay = "";
                         }
-                        if (item.LastPurchDateDisplay == "")
+                        if (item.LastPurchDateDisplay.Trim() != "")
                         {
-                            try
-                            {
-                                item.LastPurchDate = Convert.ToDateTime(item.LastPurchDateDisplay);
-                            }
-                            catch
-                            {
-                            }
+                            item.LastPurchDate = GetDateTime("LastPurchDate", item.LastPurchDateDisplay);
                         }
-                        try
-                        {
-                            if (aItem[32] == "")
-                            {
-                                item.QtyLastOrder = 0;
-                            }
-                            else
-                            {
-                                item.QtyLastOrder = Convert.ToInt32(aItem[32]);
-                            }
-                        }
-                        catch
+                        if (aItem[32] == "")
                         {
                             item.QtyLastOrder = 0;
                         }
+                        else
+                        {
+                            item.QtyLastOrder = GetIntegerValue("QtyLastOrder", aItem[32], 0);
+                        }
+
                         try
                         {
                             item.SubsubcategoryCode = aItem[33];
                         }
-                        catch
+                        catch (Exception e)
                         {
+                            Console.WriteLine("Error occurred while parsing subsubcategory code: " + e.Message);
                             item.SubsubcategoryCode = "";
                         }
                         try
                         {
                             item.SubsubcategoryDesc = aItem[34];
                         }
-                        catch
+                        catch (Exception e)
                         {
+                            Console.WriteLine("Error occurred while parsing subsubcategory description: " + e.Message);
                             item.SubsubcategoryDesc = "";
                         }
+                        try
+                        {
+                            item.ItemRefNo = aItem[35];
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("Error occurred while parsing item reference number: " + e.Message);
+                            item.ItemRefNo = "";
+                        }
+
 
                         item.AddToOrderDisplay = "Add To Order";
                         item.QtyOrder = 0;
@@ -498,178 +441,204 @@ namespace POHuntsville
                         item.QtyLabel = 0;
                         item.LineNo = 0;
 
-                        foreach (Item ci in lstCartItems)
+                        if (cartDict.TryGetValue(item.ItemNo, out var ci))
                         {
-                            if (item.ItemNo == ci.ItemNo)
-                            {
-                                item.QtyOrder = ci.QtyOrder;
-                                item.QtyCredit = ci.QtyCredit;
-                                item.QtyLabel = ci.QtyLabel;
-                                item.LineNo = ci.LineNo;
-
-                                break;
-                            }
+                            item.QtyOrder = ci.QtyOrder;
+                            item.QtyCredit = ci.QtyCredit;
+                            item.QtyLabel = ci.QtyLabel;
+                            item.LineNo = ci.LineNo;
                         }
 
-                        try
-                        {
-                            App.g_db.SaveItem(item);
-                            App.g_db.DeleteDiscontinuedItem(item.ItemNo.ToString());
-                        }
-                        catch (Exception ex)
-                        {
-                            String sMsg = ex.Message;
-                        }
-                    }
+                        itemsToSave.Add(item);
+                        processedItemNos.Add(item.ItemNo);
+                    });
 
-                    App.g_db.UpdateDiscontinuedItems();
+                    Console.WriteLine($"Parse loop: {sw.ElapsedMilliseconds}ms"); sw.Restart();
 
-                    App.g_db.UpdateOrderDetailLastPurch();
-
-                    App.g_db.SaveSetting("LastUpdateItems", DateTime.Now.ToString("1yyMMdd"));
-
-                    App.g_ItemList = App.g_db.GetItems();
-
-                    App.g_db.CommitTransaction();
-
-                    App.CommManager.GetItemQOH(App.g_Customer.CustNo);
-                    App.CommManager.GetOrderHistory(App.g_Customer.CustNo);
-                    App.CommManager.GetFlyerItemsPDF();
-                }
-            }
-            catch (Exception ex)
-            {
-                String sMsg = ex.Message + ex.StackTrace;
-            }
-        }
-
-
-        public static void commService_GetItemQOHCompletedAsync(String response)
-        {
-            try
-            {
-                //if (response == "X")
-                //{
-                //    App.g_Shell.Logout();
-                //    return;
-                //}
-
-                String sItems = response;
-                String[] aItems = sItems.Split('~');
-                int iItemNo;
-                int iQOH;
-
-                if (aItems.Length > 1)
-                {
-                    App.g_db.BeginTransaction();
-
-                    foreach (String s in aItems)
+                    try
                     {
-                        String[] aItem = s.Split("|");
-
-                        if (aItem.Count() < 2)
-                        {
-                            continue;
-                        }
-
-                        try
-                        {
-                            iItemNo = Convert.ToInt32(aItem[0]);
-                            iQOH = Convert.ToInt32(aItem[1]);
-                        }
-                        catch (Exception ex)
-                        {
-                            continue;
-                        }
-
-                        try
-                        {
-                            App.g_db.UpdateItemQOH(iItemNo, iQOH);
-                        }
-                        catch (Exception ex)
-                        {
-                            String sMsg = ex.Message;
-                        }
+                        // 
+                        await App.g_db.InsertDiscontinuedItems();
+                        await App.g_db.DeleteItems();
+                        await App.g_db.SaveItems(itemsToSave.ToList());
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error occurred while bulk-saving items: " + ex.Message);
                     }
 
-                    App.g_db.CommitTransaction();
+                    Console.WriteLine($"Save items ({itemsToSave.Count}): {sw.ElapsedMilliseconds}ms"); sw.Restart();
+
+                    try
+                    {
+                        await App.g_db.DeleteDiscontinuedItems(processedItemNos.ToList());
+
+                        Console.WriteLine($"Delete discontinued: {sw.ElapsedMilliseconds}ms"); sw.Restart();
+
+                        await App.g_db.UpdateDiscontinuedItems();
+                        Console.WriteLine("Update Discontinued Items completed");
+                        await App.g_db.UpdateOrderDetailLastPurch();
+                        Console.WriteLine("Update Order Detail Last Purch completed");
+                        await App.g_db.SaveSetting("LastUpdateItems", DateTime.Now.ToString("1yyMMdd"));
+
+                        App.g_ItemList = await App.g_db.GetItems();
+
+                        // 
+
+                        Console.WriteLine($"Finalize + commit: {sw.ElapsedMilliseconds}ms");
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Error occurred while removing discontinued items: " + ex.Message);
+                    }
+
+                    await App.CommManager.GetItemQOH(App.g_Customer.CustNo);
+                    await App.CommManager.GetOrderHistory(App.g_Customer.CustNo);
+                    await App.CommManager.GetFlyerItemsPDF();
                 }
             }
             catch (Exception ex)
             {
-                String sMsg = ex.Message + ex.StackTrace;
+                Console.WriteLine("Error occurred while updating items: " + ex.Message + ex.StackTrace);
             }
         }
 
-        public static void commService_GetItemQOH2CompletedAsync(String response)
-        {
-            Debug.WriteLine("Get Item QOH 2 returned");
 
+        public static async Task commService_GetItemQOHCompletedAsync(string response)
+        {
             try
             {
-                if (response == "X")
-                {
-                    App.g_Shell.Logout();
+                if (string.IsNullOrWhiteSpace(response))
                     return;
+
+                // if (response == "X")
+                // {
+                //     App.g_Shell.Logout();
+                //     return;
+                // }
+
+                string[] aItems = response.Split(
+                    '~',
+                    StringSplitOptions.RemoveEmptyEntries);
+
+                if (aItems.Length == 0)
+                    return;
+
+                var qohUpdates = new List<(int ItemNo, int QOH)>(aItems.Length);
+
+                foreach (string item in aItems)
+                {
+                    if (string.IsNullOrWhiteSpace(item))
+                        continue;
+
+                    string[] aItem = item.Split('|');
+
+                    if (aItem.Length < 2)
+                        continue;
+
+                    int itemNo = GetIntegerValue(
+                        "Item Number",
+                        aItem[0],
+                        0);
+
+                    int qoh = GetIntegerValue(
+                        "QOH",
+                        aItem[1],
+                        0);
+
+                    if (itemNo <= 0)
+                        continue;
+
+                    qohUpdates.Add((itemNo, qoh));
                 }
 
-                String sItems = response;
-                String[] aItems = sItems.Split('~');
-                int iItemNo;
-                int iQOH;
+                if (qohUpdates.Count == 0)
+                    return;
 
-                if (aItems.Length > 1)
+                // Bulk update
+                await App.g_db.UpdateAllItemQOH(qohUpdates);
+
+                Console.WriteLine(
+                    $"Item QOH updated successfully: {qohUpdates.Count} items");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"Get Item QOH Exception: {ex.Message}");
+
+                Console.WriteLine(ex.StackTrace);
+            }
+        }
+
+        public static async Task commService_GetItemQOH2CompletedAsync(string response)
+        {
+            Console.WriteLine("Get Item QOH 2 returned");
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(response))
+                    return;
+
+                // if (response == "X")
+                // {
+                //     App.g_Shell.Logout();
+                //     return;
+                // }
+
+                var updates = new List<(int ItemNo, int QOH)>();
+
+                foreach (string item in response.Split(
+                    '~',
+                    StringSplitOptions.RemoveEmptyEntries))
                 {
-                    App.g_db.BeginTransaction();
+                    string[] values = item.Split('|');
 
-                    foreach (String s in aItems)
-                    {
-                        String[] aItem = s.Split("|");
+                    if (values.Length < 2)
+                        continue;
 
-                        if (aItem.Count() < 2)
-                        {
-                            continue;
-                        }
+                    int itemNo = GetIntegerValue(
+                        "Item Number",
+                        values[0],
+                        0);
 
-                        try
-                        {
-                            iItemNo = Convert.ToInt32(aItem[0]);
-                            iQOH = Convert.ToInt32(aItem[1]);
-                        }
-                        catch (Exception ex)
-                        {
-                            continue;
-                        }
+                    int qoh = GetIntegerValue(
+                        "QOH",
+                        values[1],
+                        0);
 
-                        try
-                        {
-                            App.g_db.UpdateItemQOH(iItemNo, iQOH);
-                        }
-                        catch (Exception ex)
-                        {
-                            String sMsg = ex.Message;
-                        }
-                    }
+                    if (itemNo <= 0)
+                        continue;
 
-                    App.g_db.CommitTransaction();
+                    updates.Add((itemNo, qoh));
+                }
+
+                if (updates.Count > 0)
+                {
+                    // ONE DB call + ONE transaction
+                    await App.g_db.UpdateAllItemQOH(updates);
+
+                    Console.WriteLine(
+                        $"QOH 2 updated: {updates.Count} items");
                 }
             }
             catch (Exception ex)
             {
-                String sMsg = ex.Message + ex.StackTrace;
+                Console.WriteLine(
+                    $"Get Item QOH 2 Exception: {ex.Message}");
+
+                Console.WriteLine(ex.StackTrace);
             }
+
+            Console.WriteLine("Get Item QOH 2 Completed");
         }
 
-        public static void commService_ValidateLoginCompletedAsync(String response)
+        public static async Task commService_ValidateLoginCompletedAsync(String response)
         {
             Debug.WriteLine("ValidateLogin Complete");
             try
             {
                 String sUser = response;
-
-                //Database db = new Database();
-                //await db.SaveCustomerAsync(App.g_Customer);
-
                 String[] aInfo = sUser.Split("~");
                 String[] aUser = aInfo[0].Split("|");
                 String[] aCust = aInfo[1].Split("|");
@@ -689,7 +658,7 @@ namespace POHuntsville
                             {
                                 App.g_IsCredits = false;
                             }
-                            App.g_db.SaveSetting("Credits", aUser[2]);
+                            await App.g_db.SaveSetting("Credits", aUser[2]);
 
                             if (aUser[3] == "1")
                             {
@@ -699,7 +668,7 @@ namespace POHuntsville
                             {
                                 App.g_HoldForReview = false;
                             }
-                            App.g_db.SaveSetting("HoldForReview", aUser[3]);
+                            await App.g_db.SaveSetting("HoldForReview", aUser[3]);
 
                             try
                             {
@@ -711,12 +680,12 @@ namespace POHuntsville
                                 {
                                     App.g_ForceSubmit = false;
                                 }
-                                App.g_db.SaveSetting("ForceSubmit", aUser[4]);
+                                await App.g_db.SaveSetting("ForceSubmit", aUser[4]);
                             }
                             catch
                             {
                                 App.g_ForceSubmit = false;
-                                App.g_db.SaveSetting("ForceSubmit", "0");
+                                await App.g_db.SaveSetting("ForceSubmit", "0");
                             }
 
                             try
@@ -727,7 +696,7 @@ namespace POHuntsville
                             {
                                 App.g_QOHDisplay = "X";
                             }
-                            App.g_db.SaveSetting("QOHDisplay", App.g_QOHDisplay);
+                            await App.g_db.SaveSetting("QOHDisplay", App.g_QOHDisplay);
 
                             try
                             {
@@ -739,12 +708,12 @@ namespace POHuntsville
                                 {
                                     App.g_BlockItemsNoQOH = false;
                                 }
-                                App.g_db.SaveSetting("BlockItemsNoQOH", aUser[6]);
+                                await App.g_db.SaveSetting("BlockItemsNoQOH", aUser[6]);
                             }
                             catch
                             {
                                 App.g_BlockItemsNoQOH = false;
-                                App.g_db.SaveSetting("BlockItemsNoQOH", "0");
+                                await App.g_db.SaveSetting("BlockItemsNoQOH", "0");
                             }
 
                             try
@@ -757,12 +726,12 @@ namespace POHuntsville
                                 {
                                     App.g_IsScandit = false;
                                 }
-                                App.g_db.SaveSetting("IsScandit", aUser[7]);
+                                await App.g_db.SaveSetting("IsScandit", aUser[7]);
                             }
                             catch
                             {
                                 App.g_IsScandit = false;
-                                App.g_db.SaveSetting("IsScandit", "0");
+                                await App.g_db.SaveSetting("IsScandit", "0");
                             }
                             try
                             {
@@ -774,12 +743,12 @@ namespace POHuntsville
                                 {
                                     App.g_IsSalesUser = false;
                                 }
-                                App.g_db.SaveSetting("IsSalesUser", aUser[8]);
+                                await App.g_db.SaveSetting("IsSalesUser", aUser[8]);
                             }
                             catch
                             {
                                 App.g_IsSalesUser = false;
-                                App.g_db.SaveSetting("IsSalesUser", "0");
+                                await App.g_db.SaveSetting("IsSalesUser", "0");
                             }
                             try
                             {
@@ -791,12 +760,12 @@ namespace POHuntsville
                                 {
                                     App.g_IsMonthlyFlyer = false;
                                 }
-                                App.g_db.SaveSetting("MonthlyFlyer", aUser[9]);
+                                await App.g_db.SaveSetting("MonthlyFlyer", aUser[9]);
                             }
                             catch
                             {
                                 App.g_IsMonthlyFlyer = false;
-                                App.g_db.SaveSetting("MonthlyFlyer", "0");
+                                await App.g_db.SaveSetting("MonthlyFlyer", "0");
                             }
                             int iFlyerStartDate = 0;
                             try
@@ -805,7 +774,7 @@ namespace POHuntsville
                                 int.TryParse(sFlyerStartDate, out iFlyerStartDate);
                             }
                             catch { }
-                            App.g_db.SaveSetting("FlyerStartDate", iFlyerStartDate.ToString());
+                            await App.g_db.SaveSetting("FlyerStartDate", iFlyerStartDate.ToString());
                             App.g_FlyerStartDate = iFlyerStartDate;
                             int iFlyerEndDate = 0;
                             try
@@ -814,7 +783,7 @@ namespace POHuntsville
                                 int.TryParse(sFlyerEndDate, out iFlyerEndDate);
                             }
                             catch { }
-                            App.g_db.SaveSetting("FlyerEndDate", iFlyerEndDate.ToString());
+                            await App.g_db.SaveSetting("FlyerEndDate", iFlyerEndDate.ToString());
                             App.g_FlyerEndDate = iFlyerEndDate;
                             try
                             {
@@ -826,12 +795,12 @@ namespace POHuntsville
                                 {
                                     App.g_IsAutoAdd1 = false;
                                 }
-                                App.g_db.SaveSetting("AutoAdd1", aUser[13]);
+                                await App.g_db.SaveSetting("AutoAdd1", aUser[13]);
                             }
                             catch
                             {
                                 App.g_IsAutoAdd1 = false;
-                                App.g_db.SaveSetting("AutoAdd1", "0");
+                                await App.g_db.SaveSetting("AutoAdd1", "0");
                             }
                             try
                             {
@@ -843,22 +812,22 @@ namespace POHuntsville
                                 {
                                     App.g_IsRefNoLookup = false;
                                 }
-                                App.g_db.SaveSetting("RefNoLookup", aUser[14]);
+                                await App.g_db.SaveSetting("RefNoLookup", aUser[14]);
                             }
                             catch
                             {
                                 App.g_IsRefNoLookup = false;
-                                App.g_db.SaveSetting("RefNoLookup", "0");
+                                await App.g_db.SaveSetting("RefNoLookup", "0");
                             }
                             try
                             {
                                 App.g_ShoppingCartSort = aUser[15];
-                                App.g_db.SaveSetting("ShoppingCartSort", aUser[15]);
+                                await App.g_db.SaveSetting("ShoppingCartSort", aUser[15]);
                             }
                             catch
                             {
                                 App.g_ShoppingCartSort = "A";
-                                App.g_db.SaveSetting("ShoppingCartSort", "A");
+                                await App.g_db.SaveSetting("ShoppingCartSort", "A");
                             }
                             try
                             {
@@ -870,12 +839,12 @@ namespace POHuntsville
                                 {
                                     App.g_IsChainManager = false;
                                 }
-                                App.g_db.SaveSetting("IsChainManager", aUser[16]);
+                                await App.g_db.SaveSetting("IsChainManager", aUser[16]);
                             }
                             catch
                             {
                                 App.g_IsChainManager = false;
-                                App.g_db.SaveSetting("IsChainManager", "0");
+                                await App.g_db.SaveSetting("IsChainManager", "0");
                             }
 
                             if (!App.g_IsSalesUser)
@@ -913,48 +882,41 @@ namespace POHuntsville
                                 OldCustNo = App.g_Customer.CustNo;
                                 App.g_Customer.CustNo = aUser[1];
                                 //Database db = new Database();
-                                App.g_db.SaveCustomer(App.g_Customer);
-                                App.g_db.SaveLocation(loc);
+                                await App.g_db.SaveCustomer(App.g_Customer);
+                                await App.g_db.SaveLocation(loc);
 
-                                App.g_db.RestoreCartItems(App.g_Customer.CustNo);
+                                await App.g_db.RestoreCartItems(App.g_Customer.CustNo);
                             }
                         }
                         catch (Exception ex)
                         {
                         }
 
-                        if ((App.g_IsSalesUser) || (App.g_IsChainManager))
-                        {
-                            App.CommManager.GetSalespersonCustomers(App.g_UserName);
-                        }
+
 
                         if (App.g_Customer.CustNo != OldCustNo)
                         {
                             if (App.g_UserName.ToLower() == "app_test")
                             {
-                                App.g_db.DeleteCategories();
-                                App.g_db.DeleteItems();
+                                await App.g_db.DeleteCategories();
+                                await App.g_db.DeleteItems();
                             }
                         }
 
+                        await App.RefreshAll();
+                        if ((App.g_IsSalesUser) || (App.g_IsChainManager))
+                        {
+                            await App.CommManager.GetSalespersonCustomers(App.g_UserName);
+                        }
+                        await App.CommManager.GetOrderHistory(App.g_Customer.CustNo);
 
-                        App.CommManager.GetOrderHistory(App.g_Customer.CustNo);
-
-                        App.RefreshAll();
-
-                        App.g_db.SaveSetting("LoggedIn", "1");
-                        App.g_db.SaveSetting("UserName", App.g_UserName);
+                        await App.g_db.SaveSetting("LoggedIn", "1");
+                        await App.g_db.SaveSetting("UserName", App.g_UserName);
                         App.g_IsLoggedIn = true;
-                        try
-                        {
-                            MainThread.BeginInvokeOnMainThread(async () =>
+                        MainThread.BeginInvokeOnMainThread(async () =>
                             {
-                                _ = App.g_Shell.GoToHome();
+                                await App.g_Shell.GoToHome();
                             });
-                        }
-                        catch
-                        {
-                        }
                     }
                     else if (userValue == "P")
                     {
@@ -1053,7 +1015,7 @@ namespace POHuntsville
             }
         }
 
-        public static void commService_GetSettingsCompletedAsync(String response)
+        public static async Task commService_GetSettingsCompletedAsync(String response)
         {
             Debug.WriteLine("GetSettings Complete");
 
@@ -1070,7 +1032,7 @@ namespace POHuntsville
                 {
                     App.g_HoldForReview = false;
                 }
-                App.g_db.SaveSetting("HoldForReview", aSettings[0]);
+                await App.g_db.SaveSetting("HoldForReview", aSettings[0]);
 
                 try
                 {
@@ -1082,12 +1044,12 @@ namespace POHuntsville
                     {
                         App.g_ForceSubmit = false;
                     }
-                    App.g_db.SaveSetting("ForceSubmit", aSettings[1]);
+                    await App.g_db.SaveSetting("ForceSubmit", aSettings[1]);
                 }
                 catch
                 {
                     App.g_ForceSubmit = false;
-                    App.g_db.SaveSetting("ForceSubmit", "0");
+                    await App.g_db.SaveSetting("ForceSubmit", "0");
                 }
 
                 try
@@ -1098,7 +1060,7 @@ namespace POHuntsville
                 {
                     App.g_QOHDisplay = "X";
                 }
-                App.g_db.SaveSetting("QOHDisplay", App.g_QOHDisplay);
+                await App.g_db.SaveSetting("QOHDisplay", App.g_QOHDisplay);
 
                 try
                 {
@@ -1110,12 +1072,12 @@ namespace POHuntsville
                     {
                         App.g_BlockItemsNoQOH = false;
                     }
-                    App.g_db.SaveSetting("BlockItemsNoQOH", aSettings[3]);
+                    await App.g_db.SaveSetting("BlockItemsNoQOH", aSettings[3]);
                 }
                 catch
                 {
                     App.g_BlockItemsNoQOH = false;
-                    App.g_db.SaveSetting("BlockItemsNoQOH", "0");
+                    await App.g_db.SaveSetting("BlockItemsNoQOH", "0");
                 }
 
                 try
@@ -1128,12 +1090,12 @@ namespace POHuntsville
                     {
                         App.g_IsMonthlyFlyer = false;
                     }
-                    App.g_db.SaveSetting("MonthlyFlyer", aSettings[4]);
+                    await App.g_db.SaveSetting("MonthlyFlyer", aSettings[4]);
                 }
                 catch
                 {
                     App.g_IsMonthlyFlyer = false;
-                    App.g_db.SaveSetting("MonthlyFlyer", "0");
+                    await App.g_db.SaveSetting("MonthlyFlyer", "0");
                 }
 
                 int iFlyerStartDate = 0;
@@ -1143,7 +1105,7 @@ namespace POHuntsville
                     int.TryParse(sFlyerStartDate, out iFlyerStartDate);
                 }
                 catch { }
-                App.g_db.SaveSetting("FlyerStartDate", iFlyerStartDate.ToString());
+                await App.g_db.SaveSetting("FlyerStartDate", iFlyerStartDate.ToString());
                 App.g_FlyerStartDate = iFlyerStartDate;
 
                 int iFlyerEndDate = 0;
@@ -1153,7 +1115,7 @@ namespace POHuntsville
                     int.TryParse(sFlyerEndDate, out iFlyerEndDate);
                 }
                 catch { }
-                App.g_db.SaveSetting("FlyerEndDate", iFlyerEndDate.ToString());
+                await App.g_db.SaveSetting("FlyerEndDate", iFlyerEndDate.ToString());
                 App.g_FlyerEndDate = iFlyerEndDate;
 
                 try
@@ -1166,12 +1128,12 @@ namespace POHuntsville
                     {
                         App.g_IsAutoAdd1 = false;
                     }
-                    App.g_db.SaveSetting("AutoAdd1", aSettings[8]);
+                    await App.g_db.SaveSetting("AutoAdd1", aSettings[8]);
                 }
                 catch
                 {
                     App.g_IsAutoAdd1 = false;
-                    App.g_db.SaveSetting("AutoAdd1", "0");
+                    await App.g_db.SaveSetting("AutoAdd1", "0");
                 }
 
                 try
@@ -1184,23 +1146,23 @@ namespace POHuntsville
                     {
                         App.g_IsRefNoLookup = false;
                     }
-                    App.g_db.SaveSetting("RefNoLookup", aSettings[9]);
+                    await App.g_db.SaveSetting("RefNoLookup", aSettings[9]);
                 }
                 catch
                 {
                     App.g_IsRefNoLookup = false;
-                    App.g_db.SaveSetting("RefNoLookup", "0");
+                    await App.g_db.SaveSetting("RefNoLookup", "0");
                 }
 
                 try
                 {
                     App.g_ShoppingCartSort = aSettings[10];
-                    App.g_db.SaveSetting("ShoppingCartSort", aSettings[10]);
+                    await App.g_db.SaveSetting("ShoppingCartSort", aSettings[10]);
                 }
                 catch
                 {
                     App.g_ShoppingCartSort = "A";
-                    App.g_db.SaveSetting("ShoppingCartSort", "A");
+                    await App.g_db.SaveSetting("ShoppingCartSort", "A");
                 }
             }
             catch (Exception ex)
@@ -1208,31 +1170,21 @@ namespace POHuntsville
             }
         }
 
-        public static void commService_SubmitOrderCompletedAsync(String response)
+        public static async Task commService_SubmitOrderCompletedAsync(String response)
         {
             try
             {
                 if (response == "S")
                 {
-                    App.g_db.ClearOrderCartItems();
+                    await App.g_db.ClearOrderCartItems();
                     App.g_Notes = "";
+
+                    await Shell.Current.DisplayAlertAsync("Profit Order", "Thank you! Your order has been placed.", "OK");
 
                     MainThread.BeginInvokeOnMainThread(async () =>
                     {
-                        await Shell.Current.DisplayAlertAsync("Profit Order", "Thank you! Your order has been placed.", "OK");
+                        await App.g_Shell.GoToHome();
                     });
-
-
-                    try
-                    {
-                        MainThread.BeginInvokeOnMainThread(async () =>
-                        {
-                            await App.g_Shell.GoToHome();
-                        });
-                    }
-                    catch
-                    {
-                    }
                 }
                 else if (response == "X")
                 {
@@ -1251,37 +1203,18 @@ namespace POHuntsville
                 }
                 else if (response == "Z")
                 {
+                    await Shell.Current.DisplayAlertAsync("Profit Order", "Order has already been submitted.", "Ok");
+
+                    await App.g_db.ClearOrderCartItems();
+                    App.g_Notes = "";
                     MainThread.BeginInvokeOnMainThread(async () =>
                     {
-                        await Shell.Current.DisplayAlertAsync("Profit Order", "Order has already been submitted.", "Ok");
+                        await App.g_Shell.GoToHome();
                     });
-
-                    App.g_db.ClearOrderCartItems();
-                    App.g_Notes = "";
-
-                    try
-                    {
-                        MainThread.BeginInvokeOnMainThread(async () =>
-                        {
-                            await App.g_Shell.GoToHome();
-                        });
-                    }
-                    catch
-                    {
-                    }
                 }
                 else
                 {
-                    try
-                    {
-                        MainThread.BeginInvokeOnMainThread(async () =>
-                        {
-                            await Shell.Current.DisplayAlertAsync("Profit Order", "Error submitting order.  Please try again.", "Ok");
-                        });
-                    }
-                    catch
-                    {
-                    }
+                    await Shell.Current.DisplayAlertAsync("Profit Order", "Error submitting order.  Please try again.", "Ok");
                 }
             }
             catch (Exception ex)
@@ -1289,14 +1222,14 @@ namespace POHuntsville
             }
         }
 
-        public static void commService_SubmitReturnCompletedAsync(String response)
+        public static async Task commService_SubmitReturnCompletedAsync(String response)
         {
             try
             {
 
                 if (response == "S")
                 {
-                    App.g_db.ClearReturnCartItems();
+                    await App.g_db.ClearReturnCartItems();
 
                     MainThread.BeginInvokeOnMainThread(async () =>
                     {
@@ -1349,7 +1282,7 @@ namespace POHuntsville
             }
         }
 
-        public static void commService_GetOrderHistoryCompletedAsyncOld(String response)
+        public static async Task commService_GetOrderHistoryCompletedAsyncOld(String response)
         {
             try
             {
@@ -1359,14 +1292,10 @@ namespace POHuntsville
                 String[] aOrders = sOrders.Split('~');
                 List<String> lstHeader = new List<String>();
 
-                App.g_db.DeleteReorderItems();
+                await App.g_db.DeleteReorderItems();
 
                 if (aOrders.Length > 1)
                 {
-                    //Database db = new Database();
-
-                    App.g_db.BeginTransaction();
-
                     foreach (String s in aOrders)
                     {
                         String[] aOrder = s.Split("|");
@@ -1386,7 +1315,7 @@ namespace POHuntsville
                         }
                         if (bDeleteDetail)
                         {
-                            App.g_db.DeleteOrderDetail(aOrder[0]);
+                            await App.g_db.DeleteOrderDetail(aOrder[0]);
                             lstHeader.Add(aOrder[0]);
                         }
 
@@ -1523,10 +1452,10 @@ namespace POHuntsville
 
                         try
                         {
-                            App.g_db.SaveOrderHeader(oh);
-                            App.g_db.SaveOrderDetail(od);
-                            App.g_db.SaveReorderItem(ri);
-                            Item item = App.g_db.FindItem(ri.ItemNo, ri.ItemNo.ToString());
+                            await App.g_db.SaveOrderHeader(oh);
+                            await App.g_db.SaveOrderDetail(od);
+                            await App.g_db.SaveReorderItem(ri);
+                            Item item = await App.g_db.FindItem(ri.ItemNo, ri.ItemNo.ToString());
                             if (item != null)
                             {
                                 item.LastPurchDate = ri.LastPurchDate;
@@ -1535,7 +1464,7 @@ namespace POHuntsville
                                 item.QtyOrderDisplay = ri.QtyOrderDisplay;
                                 item.QtyLast90 = ri.QtyLast90;
                                 item.QtyLast90Display = ri.QtyLast90Display;
-                                App.g_db.UpdateItem(item);
+                                await App.g_db.UpdateItem(item);
                             }
                         }
                         catch (Exception ex)
@@ -1544,9 +1473,9 @@ namespace POHuntsville
                         }
                     }
 
-                    App.g_ReorderItemList = App.g_db.GetReorderItems();
+                    App.g_ReorderItemList = await App.g_db.GetReorderItems();
 
-                    App.g_db.CommitTransaction();
+
 
                 }
 
@@ -1559,151 +1488,119 @@ namespace POHuntsville
             }
         }
 
-        public static void commService_GetOrderHistoryCompletedAsync(String response)
+        public static async Task commService_GetOrderHistoryCompletedAsync(string response)
         {
-            Debug.WriteLine("Get Order History Complete");
+            Debug.WriteLine("Get Order History Returned");
 
             try
             {
-                String sOrders = response;
-                String[] aOrders = sOrders.Split('~');
+                if (string.IsNullOrWhiteSpace(response))
+                    return;
 
-                if (aOrders.Length > 1)
+                string[] orders = response.Split(
+                    '~',
+                    StringSplitOptions.RemoveEmptyEntries);
+
+                if (orders.Length == 0)
+                    return;
+
+                var existingHeaders = await App.g_db.GetOrderHeaders();
+
+                var existingOrderNos = existingHeaders
+                    .Select(x => x.OrderNo)
+                    .ToHashSet();
+
+                var addedHeaders = new HashSet<string>();
+
+                var headersToSave = new List<OrderHeader>();
+                var detailsToSave = new List<OrderDetail>();
+
+                foreach (string order in orders)
                 {
-                    //Database db = new Database();
+                    string[] aOrder = order.Split('|');
 
-                    List<OrderHeader> lstOrders = App.g_db.GetOrderHeaders();
-                    List<String> lstOrderHeadersAdded = new List<String>();
+                    if (aOrder.Length < 24)
+                        continue;
 
-                    App.g_db.BeginTransaction();
+                    string orderNo = aOrder[0];
 
-                    foreach (String s in aOrders)
+                    // Header
+                    if (!existingOrderNos.Contains(orderNo) &&
+                        addedHeaders.Add(orderNo))
                     {
-                        String[] aOrder = s.Split("|");
-                        if (aOrder.Count() < 2)
+                        headersToSave.Add(new OrderHeader
                         {
-                            continue;
-                        }
-
-                        bool bFound = false;
-                        foreach (OrderHeader h in lstOrders)
-                        {
-                            if (h.OrderNo == aOrder[0])
-                            {
-                                bFound = true;
-                                break;
-                            }
-                        }
-                        if (bFound)
-                        {
-                            continue;
-                        }
-
-                        bFound = false;
-                        foreach (String sHeader in lstOrderHeadersAdded)
-                        {
-                            if (sHeader == aOrder[0])
-                            {
-                                bFound = true;
-                                break;
-                            }
-                        }
-
-                        if (!bFound)
-                        {
-                            lstOrderHeadersAdded.Add(aOrder[0]);
-
-                            OrderHeader oh = new OrderHeader();
-                            oh.OrderNo = aOrder[0];
-                            oh.CustId = Convert.ToInt32(aOrder[1]);
-                            oh.OrderDate = Convert.ToDateTime(aOrder[2]);
-                            oh.OrderDateDisplay = aOrder[2];
-                            oh.Total = Convert.ToDecimal(aOrder[3]);
-                            oh.TotalDisplay = string.Format("{0:C}", oh.Total);
-                            oh.Items = Convert.ToInt32(aOrder[4]);
-                            oh.Pieces = Convert.ToInt32(aOrder[5]);
-
-                            App.g_db.SaveOrderHeader(oh);
-                        }
-
-                        OrderDetail od = new OrderDetail();
-                        od.OrderNo = aOrder[0];
-                        od.LineNo = Convert.ToInt32(aOrder[6]);
-                        od.ItemNo = Convert.ToInt32(aOrder[7]);
-                        od.ItemNoDisplay = aOrder[7];
-                        od.QtyOrdered = Convert.ToInt32(aOrder[8]);
-                        od.QtyShipped = Convert.ToInt32(aOrder[8]);
-                        od.Price = Convert.ToDecimal(aOrder[9]);
-                        od.PriceDisplay = string.Format("{0:C}", od.Price);
-                        od.UPC = aOrder[10];
-                        if (od.UPC.Length > 0)
-                        {
-                            od.ItemNoDisplayUPC = od.UPC;
-                        }
-                        else
-                        {
-                            od.ItemNoDisplayUPC = "";
-                        }
-                        od.Description = aOrder[11];
-                        od.UOM = aOrder[12];
-                        od.SellUnitsInPurch = aOrder[13];
-                        od.SizeDisplay = od.UOM + "/" + od.SellUnitsInPurch;
-                        od.SizeUOM = "/" + od.UOM;
-                        od.Size = aOrder[14];
-                        od.Form = aOrder[15];
-                        od.CategoryCode = aOrder[16];
-                        od.CategoryDesc = aOrder[17];
-                        od.SubcategoryCode = aOrder[18];
-                        od.SubcategoryDesc = aOrder[19];
-                        od.VendorId = aOrder[20];
-                        od.VendorName = aOrder[21];
-                        od.Status = aOrder[22];
-                        if (od.Status == "A")
-                        {
-                            od.IsAvailable = true;
-                        }
-                        else
-                        {
-                            od.IsAvailable = false;
-                        }
-                        try
-                        {
-                            od.QOH = Convert.ToInt32(aOrder[23].Trim());
-                        }
-                        catch
-                        {
-                            od.QOH = 0;
-                        }
-                        if (od.QOH == 0)
-                        {
-                            od.IsAvailable = false;
-                        }
-                        od.ImageURL = Constants.ItemImageUrl + od.ItemNo.ToString() + ".jpg";
-
-                        try
-                        {
-                            App.g_db.SaveOrderDetail(od);
-                            //App.g_db.SaveReorderItem(ri);
-                        }
-                        catch (Exception ex)
-                        {
-                            String sMsg = ex.Message;
-                        }
+                            OrderNo = orderNo,
+                            CustId = GetIntegerValue("CustId", aOrder[1], 0),
+                            OrderDate = GetDateTime("OrderDate", aOrder[2]),
+                            OrderDateDisplay = aOrder[2],
+                            Total = GetDecimalValue("Total", aOrder[3], 0),
+                            TotalDisplay = GetDecimalValue("Total", aOrder[3], 0).ToString("0.00"),
+                            Items = GetIntegerValue("Items", aOrder[4], 0),
+                            Pieces = GetIntegerValue("Pieces", aOrder[5], 0)
+                        });
                     }
 
-                    App.g_db.UpdateOrderDetailLastPurch();
+                    int itemNo = GetIntegerValue("ItemNo", aOrder[7], 0);
+                    int qoh = GetIntegerValue("QOH", aOrder[23], 0);
 
-                    App.g_ReorderItemList = App.g_db.GetReorderItems();
-
-                    App.g_db.CommitTransaction();
+                    detailsToSave.Add(new OrderDetail
+                    {
+                        OrderNo = orderNo,
+                        LineNo = GetIntegerValue("LineNo", aOrder[6], 0),
+                        ItemNo = itemNo,
+                        ItemNoDisplay = aOrder[7],
+                        QtyOrdered = GetIntegerValue("QtyOrdered", aOrder[8], 0),
+                        QtyShipped = GetIntegerValue("QtyShipped", aOrder[8], 0),
+                        Price = GetDecimalValue("Price", aOrder[9], 0),
+                        PriceDisplay = GetDecimalValue("Price", aOrder[9], 0).ToString("0.00"),
+                        UPC = aOrder[10],
+                        ItemNoDisplayUPC = string.IsNullOrWhiteSpace(aOrder[10])
+                            ? string.Empty
+                            : aOrder[10],
+                        Description = aOrder[11],
+                        UOM = aOrder[12],
+                        SellUnitsInPurch = aOrder[13],
+                        SizeDisplay = $"{aOrder[12]}/{aOrder[13]}",
+                        SizeUOM = $"/{aOrder[12]}",
+                        Size = aOrder[14],
+                        Form = aOrder[15],
+                        CategoryCode = aOrder[16],
+                        CategoryDesc = aOrder[17],
+                        SubcategoryCode = aOrder[18],
+                        SubcategoryDesc = aOrder[19],
+                        VendorId = aOrder[20],
+                        VendorName = aOrder[21],
+                        Status = aOrder[22],
+                        QOH = qoh,
+                        IsAvailable = aOrder[22] == "A" && qoh > 0,
+                        ImageURL = $"{Constants.ItemImageUrl}{itemNo}.jpg"
+                    });
                 }
+
+                //
+                // BULK SAVE
+                //
+                await App.g_db.SaveOrderHeaders(headersToSave);
+                await App.g_db.SaveOrderDetails(detailsToSave);
+
+                await App.g_db.UpdateOrderDetailLastPurch();
+
+                App.g_ReorderItemList =
+                    await App.g_db.GetReorderItems();
+
+                Debug.WriteLine(
+                    $"Headers:{headersToSave.Count} Details:{detailsToSave.Count}");
             }
             catch (Exception ex)
             {
+                Debug.WriteLine(
+                    $"GetOrderHistory Exception: {ex}");
             }
+            Debug.WriteLine("Get Order History Complete");
         }
 
-        public static void commService_GetInvoicePDFCompletedAsync(String response)
+        public static async Task commService_GetInvoicePDFCompletedAsync(String response)
         {
             Debug.WriteLine("Get Invoice PDF Complete");
 
@@ -1716,27 +1613,23 @@ namespace POHuntsville
             }
         }
 
-        public static void commService_GetSalespersonCustomersCompletedAsync(String response)
+        public static async Task commService_GetSalespersonCustomersCompletedAsync(String response)
         {
             try
             {
-                Debug.WriteLine("Get Salesperson Customers returned");
-                Debug.WriteLine(response);
+                Console.WriteLine("Get Salesperson Customers returned");
 
                 String sCustomers = response;
                 String[] aCustomers = sCustomers.Split('~');
-
+                ConcurrentBag<SalesCustomer> lstCustomer = new ConcurrentBag<SalesCustomer>();
                 if (aCustomers.Length > 1)
                 {
-                    List<SalesCustomer> lstCustomers = new List<SalesCustomer>();
-                    // Process items in parallel using all available CPU cores
-
-                    foreach (String s in aCustomers)
+                    Parallel.ForEach(aCustomers, s =>
                     {
                         String[] aCust = s.Split("|");
                         if (aCust.Count() < 2)
                         {
-                            continue;
+                            return;
                         }
                         SalesCustomer c = new SalesCustomer();
                         c.CustNo = aCust[0];
@@ -1749,16 +1642,26 @@ namespace POHuntsville
                         c.ARBalance = 0;
                         try
                         {
-                            c.ARBalance = Convert.ToDecimal(aCust[6]);
+                            c.ARBalance = GetDecimalValue("SalesCustomer.ARBalance", aCust[6], 0);
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Error occurred while parsing ARBalance: " + ex.Message);
+                        }
                         c.ARBalanceDisplay = string.Format("{0:C2}", c.ARBalance);
                         c.CreditLimit = 0;
                         try
                         {
-                            c.CreditLimit = Convert.ToDecimal(aCust[7]);
+                            string creditLimitStr = aCust[7];
+                            if (!string.IsNullOrEmpty(creditLimitStr))
+                            {
+                                c.CreditLimit = GetDecimalValue("SalesCustomer.CreditLimit", creditLimitStr, 0);
+                            }
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Error occurred while parsing CreditLimit: " + ex.Message);
+                        }
                         if (c.CreditLimit > 0)
                         {
                             c.CreditLimitDisplay = string.Format("{0:C2}", c.CreditLimit);
@@ -1772,6 +1675,7 @@ namespace POHuntsville
                         c.Email = aCust[10];
                         // invoice multiplier aCust[11]
                         c.TermsDesc = aCust[12];
+
                         try
                         {
                             if (aCust[13] == "0")
@@ -1780,49 +1684,54 @@ namespace POHuntsville
                             }
                             else
                             {
-                                c.LastPaymentDate = aCust[13].Substring(3, 2) + "/";
-                                c.LastPaymentDate += aCust[13].Substring(5, 2) + "/";
-                                c.LastPaymentDate += aCust[13].Substring(1, 2);
+                                c.LastOrderDate = FormatLastOrderDate(aCust[13]);
                             }
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Error occurred while parsing LastPaymentDate: " + ex.Message);
+                        }
                         try
                         {
+
                             if (aCust[14] == "0")
                             {
                                 c.LastOrderDate = "N/A";
                             }
                             else
                             {
-                                c.LastOrderDate = aCust[14].Substring(3, 2) + "/";
-                                c.LastOrderDate += aCust[14].Substring(5, 2) + "/";
-                                c.LastOrderDate += aCust[14].Substring(1, 2);
+                                c.LastOrderDate = FormatLastOrderDate(aCust[14]);
                             }
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Error occurred while parsing LastOrderDate: " + ex.Message);
+                        }
                         try
                         {
-                            c.MinOrderAmount = Decimal.Parse(aCust[15]);
-                            c.ShippingFee = Decimal.Parse(aCust[16]);
-                            c.MinOrderQty = Decimal.Parse(aCust[17]);
+                            c.MinOrderAmount = GetDecimalValue("SalesCustomer.MinOrderAmount", aCust[15], 0);
+                            c.ShippingFee = GetDecimalValue("SalesCustomer.ShippingFee", aCust[16], 0);
+                            c.MinOrderQty = GetDecimalValue("SalesCustomer.MinOrderQty", aCust[17], 0);
                         }
-                        catch { }
-                        lstCustomers.Add(c);
-                    }
-                    App.g_db.BeginTransaction();
-                    App.g_db.DeleteSalesCustomers();
-                    App.g_db.SaveSalesCustomer(lstCustomers);
-                    App.g_db.CommitTransaction();
-                    Debug.WriteLine("Sales Person Completed");
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Error occurred while parsing min order values: " + ex.Message);
+                        }
+                        lstCustomer.Add(c);
+                    });
+
+                    await App.g_db.DeleteAllSalesCustomer();
+                    await App.g_db.SaveSalesCustomer(lstCustomer.ToList());
+                    Console.WriteLine("Saving SalesPerson Customers");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("Exeception in parsing SalesPerson" + ex.Message);
+                Console.WriteLine("Exeception in parsing SalesPerson" + ex.Message);
             }
         }
 
-        public static void commService_GetFlyerItemsPDFCompleted(String response)
+        public static async Task commService_GetFlyerItemsPDFCompleted(String response)
         {
             Debug.WriteLine("GetFlyerItemsPDFCompleted");
 
@@ -1836,9 +1745,9 @@ namespace POHuntsville
                 {
                     //Database db = new Database();
 
-                    App.g_db.BeginTransaction();
 
-                    App.g_db.ClearFlyerItems();
+
+                    await App.g_db.ClearFlyerItems();
 
                     foreach (String s in aItems)
                     {
@@ -1868,7 +1777,7 @@ namespace POHuntsville
 
                         try
                         {
-                            App.g_db.UpdateItemFlyerInfo(item);
+                            await App.g_db.UpdateItemFlyerInfo(item);
                         }
                         catch (Exception ex)
                         {
@@ -1876,7 +1785,7 @@ namespace POHuntsville
                         }
                     }
 
-                    App.g_db.CommitTransaction();
+
                 }
 
                 if (sFlyerInfo[1].Length > 0)
@@ -1900,15 +1809,15 @@ namespace POHuntsville
             }
         }
 
-        public static void commService_ValidateUserActiveCompletedAsync(String response)
+        public static async Task commService_ValidateUserActiveCompletedAsync(String response)
         {
             String sUser = response;
             if (sUser == "0")
             {
                 try
                 {
-                    App.g_db.SaveSetting("LoggedIn", "0");
-                    App.g_db.SaveSetting("UserName", App.g_UserName);
+                    await App.g_db.SaveSetting("LoggedIn", "0");
+                    await App.g_db.SaveSetting("UserName", App.g_UserName);
 
                     try
                     {
@@ -1925,6 +1834,102 @@ namespace POHuntsville
                 {
                 }
             }
+        }
+        public static DateTime GetDateTime(string key, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return DateTime.MinValue;
+
+            value = value.Trim();
+
+            // First try exact formats
+            string[] formats =
+            {
+                "M/d/yyyy",
+                "MM/dd/yyyy",
+                "yyyy-MM-dd",
+                "yyyyMMdd",
+                "M/d/yy",
+                "MM/dd/yy"
+            };
+
+            if (DateTime.TryParseExact(
+                    value,
+                    formats,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var date))
+            {
+                return date;
+            }
+
+            // Fallback to normal parsing
+            if (DateTime.TryParse(
+                    value,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out date))
+            {
+                return date;
+            }
+
+            Console.WriteLine($"{key} Invalid Date: '{value}'");
+
+            return DateTime.MinValue;
+        }
+        public static int GetIntegerValue(String key, String value, int defaultValue)
+        {
+            try
+            {
+                string sizeValue = value.Trim();
+                if (sizeValue.Length > 0)
+                {
+                    string digits = new string(sizeValue
+                    .TakeWhile(char.IsDigit)
+                    .ToArray());
+
+                    return int.TryParse(digits, out var size)
+                        ? size
+                        : defaultValue;
+                }
+                else
+                {
+                    return defaultValue;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(key + "Converting string to int" + e.Message);
+                return defaultValue;
+            }
+        }
+
+        public static Decimal GetDecimalValue(String key, String value, Decimal defaultValue)
+        {
+            try
+            {
+                string sizeValue = value.Trim();
+                if (sizeValue.Length != 0)
+                    return Convert.ToDecimal(sizeValue);
+                else
+                    return defaultValue;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(key + "Converting string to Decimal " + e.Message);
+                return defaultValue;
+            }
+        }
+        private static string FormatLastOrderDate(string rawDate)
+        {
+            if (string.IsNullOrWhiteSpace(rawDate) || rawDate.Length < 7)
+            {
+                return "N/A";
+            }
+            string date = $"{rawDate[3]}{rawDate[4]}/" +
+                   $"{rawDate[5]}{rawDate[6]}/" +
+                   $"{rawDate[1]}{rawDate[2]}";
+            return date;
         }
     }
 }

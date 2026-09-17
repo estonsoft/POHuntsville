@@ -21,12 +21,12 @@ namespace POHuntsville.Views
             RefreshList();
         }
 
-        public void RefreshList()
+        public async void RefreshList()
         {
             OrderHistoryList.ItemsSource = null;
-            Task.Run(() =>
+            Task.Run(async () =>
             {
-                List<OrderHeader> orderHeaders = App.g_db.GetOrderHeaders();
+                List<OrderHeader> orderHeaders = await App.g_db.GetOrderHeaders();
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
                     OrderHistoryList.ItemsSource = orderHeaders;
@@ -53,7 +53,7 @@ namespace POHuntsville.Views
             {
                 loading.IsRunning = true;
                 loading.IsVisible = true;
-            } );
+            });
             var lbl = sender as OrderImage;
             App.g_OrderNo = lbl.OrderNo;
 
@@ -75,7 +75,7 @@ namespace POHuntsville.Views
                 await App.g_Shell.GoToInvoiceViewer();
             }
             catch (Exception error)
-            {                 
+            {
                 await DisplayAlertAsync("Error", error.Message, "Ok");
             }
             MainThread.BeginInvokeOnMainThread(async () =>

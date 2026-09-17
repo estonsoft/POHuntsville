@@ -47,7 +47,7 @@ namespace POHuntsville.Views
         public ShoppingCartPage()
         {
             InitializeComponent();
-            
+
             BindingContext = this;
 
             App.g_ShoppingCartPage = this;
@@ -60,11 +60,11 @@ namespace POHuntsville.Views
             });
         }
 
-        protected override void OnAppearing()
+        protected override async void OnAppearing()
         {
             base.OnAppearing();
 
-            lstItems = App.g_db.GetOrderCartItems();
+            lstItems = await App.g_db.GetOrderCartItems();
 
             if (lstItems.Count > 0)
             {
@@ -125,7 +125,7 @@ namespace POHuntsville.Views
         {
             ItemsListCart.ItemsSource = null;
 
-            lstItems = App.g_db.GetOrderCartItems();
+            lstItems = await App.g_db.GetOrderCartItems();
 
             foreach (Item i in lstItems)
             {
@@ -153,7 +153,7 @@ namespace POHuntsville.Views
 
             if (bClear)
             {
-                App.g_db.ClearOrderCartItems();
+                await App.g_db.ClearOrderCartItems();
                 await App.g_Shell.GoToHome();
             }
         }

@@ -1,4 +1,6 @@
 ﻿using System.Diagnostics;
+using POHuntsville.Controls;
+using POHuntsville.ViewModels;
 
 namespace POHuntsville.Views
 {
@@ -8,8 +10,6 @@ namespace POHuntsville.Views
         public HomePage()
         {
             InitializeComponent();
-
-            BindingContext = this;            
             InitializeBannersAsync();
         }
 
@@ -18,7 +18,7 @@ namespace POHuntsville.Views
             try
             {
                 // Move DB call off UI thread
-                _banners = await Task.Run(() => App.g_db.GetBanners());
+                _banners = await Task.Run(async () => await App.g_db.GetBanners());
             }
             catch
             {
@@ -79,7 +79,7 @@ namespace POHuntsville.Views
         {
             base.OnAppearing();
             App.g_HomePage = this;
-            LoadApp(); 
+            LoadApp();
         }
 
         private async void LoadApp()
@@ -102,7 +102,7 @@ namespace POHuntsville.Views
                 return;
             }
 
-            
+
             if (App.g_Customer.Status == "3")
             {
                 await Shell.Current.DisplayAlertAsync("Profit Order", "Registration request has been completed.  Please check your email for instructions.", "Ok");
@@ -120,9 +120,10 @@ namespace POHuntsville.Views
             App.g_SearchText = "";
             App.g_ScanBarcode = "";
             SearchText.Text = "";
-            LoadCategories();
-            TopCategoriesCollectionView.SelectedItem = null;
-            LoadingIndicator.IsVisible = false;
+            if (BindingContext is HomeViewModel viewModel)
+            {
+                await viewModel.LoadCategories();
+            }
         }
 
         public void SetLoginControls()
@@ -131,22 +132,7 @@ namespace POHuntsville.Views
             lblUserName.Text = App.g_Customer.CompanyName;
         }
 
-        public void LoadCategories()
-        {
-            
-            if (category == null || category?.Count == 0)
-            {
-                Task.Delay(1000).ContinueWith(t =>
-                {
-                    category = App.g_db.GetHomePageCategories();
-                    App.g_HomePageCategoryList = category;
-                    MainThread.BeginInvokeOnMainThread(() =>
-                    {
-                        TopCategoriesCollectionView.ItemsSource = category;
-                    });
-                }, TaskScheduler.FromCurrentSynchronizationContext());
-            }
-        }
+
 
         async void CategoryTapped(String Code, String Description)
         {
@@ -172,14 +158,22 @@ namespace POHuntsville.Views
                 CategoryTapped(selectedCategory.Code, selectedCategory.Description);
             }
         }
+
+        private void OnHomeCategoryTapped(object sender, EventArgs e)
+        {
+            if (sender is HomePageItems categoryView && categoryView.BindingContext is Category category)
+            {
+                CategoryTapped(category.Code, category.Description);
+            }
+        }
         async void OnCategoryTapped(object sender, EventArgs e)
         {
             TappedEventArgs te = (TappedEventArgs)e;
 
             string CategoryCode = (string)te.Parameter;
 
-            //Database db = new Database();
-            Category cat = App.g_db.GetCategory(CategoryCode);
+
+            Category cat = await App.g_db.GetCategory(CategoryCode);
 
             App.g_Category.Code = cat.Code;
             App.g_Category.Description = cat.Description;
@@ -211,10 +205,10 @@ namespace POHuntsville.Views
             {
                 try
                 {
-                    App.g_db.SuspendCartItems(App.g_Customer.CustNo);
+                    await App.g_db.SuspendCartItems(App.g_Customer.CustNo);
                 }
                 catch { }
-                App.g_db.SaveSetting("LoggedIn", "0");
+                await App.g_db.SaveSetting("LoggedIn", "0");
                 App.g_IsLoggedIn = false;
                 SetLoginControls();
                 await App.g_Shell.GoToLogin();
@@ -224,8 +218,8 @@ namespace POHuntsville.Views
 
         async void OnPastPurchases(object sender, EventArgs e)
         {
-            //Database db = new Database();
-            int iReorderItems = App.g_db.GetReorderItemsCount();
+
+            int iReorderItems = await App.g_db.GetReorderItemsCount();
 
             if (iReorderItems == 0)
             {
@@ -235,6 +229,18 @@ namespace POHuntsville.Views
             {
                 await App.g_Shell.GoToReorderItems();
             }
+        }
+
+        async void OnRefresh(object sender, EventArgs e)
+        {
+            await App.ResetProgressAsync();
+            LoadingAlert.IsVisible = true;
+            LoadingAlert.IsEnabled = true;
+            await App.g_App.LoadAppData();
+            HomeViewModel homeViewModel = (HomeViewModel)BindingContext;
+            await homeViewModel.LoadCategories();
+            LoadingAlert.IsVisible = false;
+            LoadingAlert.IsEnabled = false;
         }
 
         async void OnRegisterClick(object sender, EventArgs e)
@@ -306,6 +312,22 @@ namespace POHuntsville.Views
 
                 //await App.g_Shell.GoToHome();
             }
+        }
+
+        public void UpdateSyncProgress(
+            double current,
+            string status)
+        {
+            int total = 100;
+
+            var progress = (double)current / total;
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                LoadingAlert.ProgressValue = progress;
+                LoadingAlert.ProgressPercentage = (int)(progress * 100);
+                LoadingAlert.SyncStatus = status;
+            });
         }
     }
 }

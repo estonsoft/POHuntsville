@@ -18,6 +18,7 @@ namespace POHuntsville
         public static ReturnCartPage g_ReturnCartPage;
         public static LabelCartPage g_LabelCartPage;
         public static CheckoutPage g_CheckoutPage;
+        public static CustomerListPage g_CustomerPage;
         public static Customer g_Customer;
         public static Category g_Category;
         public static Subcategory g_Subcategory;
@@ -85,10 +86,15 @@ namespace POHuntsville
 
             Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1JHaF5cWWdCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdlWXpednVURGVdVk1+XkJWZ0g=");
             App.g_db = Database.Instance();
-            
-            LoadSettings();
-            LoadDataFromServer();
-            LoadCustomerFromServer();            
+
+            LoadAppData();
+        }
+
+        public async Task LoadAppData()
+        {
+            await LoadSettings();
+            await LoadDataFromServer();
+            await LoadCustomerFromServer();
         }
 
         private async Task LoadSettings()
@@ -99,10 +105,10 @@ namespace POHuntsville
             {
                 App.g_UserName = "";
 
-                if (App.g_db.GetSetting("LoggedIn") == "1")
+                if (await App.g_db.GetSetting("LoggedIn") == "1")
                 {
                     App.g_IsLoggedIn = true;
-                    App.g_UserName = App.g_db.GetSetting("UserName");
+                    App.g_UserName = await App.g_db.GetSetting("UserName");
                 }
 
                 if (App.g_UserName == "app_test")
@@ -116,7 +122,7 @@ namespace POHuntsville
 
                 App.UpdateServerLinks();
 
-                if (App.g_db.GetSetting("Credits") == "1")
+                if (await App.g_db.GetSetting("Credits") == "1")
                 {
                     App.g_IsCredits = true;
                 }
@@ -125,9 +131,9 @@ namespace POHuntsville
                     App.g_IsCredits = false;
                 }
 
-                App.g_QOHDisplay = App.g_db.GetSetting("QOHDisplay");
-                App.g_IsScannerDisabled = App.g_db.GetSetting("ScannerDisabled");
-                if (App.g_db.GetSetting("MonthlyFlyer") == "1")
+                App.g_QOHDisplay = await App.g_db.GetSetting("QOHDisplay");
+                App.g_IsScannerDisabled = await App.g_db.GetSetting("ScannerDisabled");
+                if (await App.g_db.GetSetting("MonthlyFlyer") == "1")
                 {
                     App.g_IsMonthlyFlyer = true;
                 }
@@ -135,7 +141,7 @@ namespace POHuntsville
                 {
                     App.g_IsMonthlyFlyer = false;
                 }
-                string sFlyerStartDate = App.g_db.GetSetting("FlyerStartDate");
+                string sFlyerStartDate = await App.g_db.GetSetting("FlyerStartDate");
                 if (sFlyerStartDate == "")
                 {
                     App.g_FlyerStartDate = 0;
@@ -146,7 +152,7 @@ namespace POHuntsville
                     int.TryParse(sFlyerStartDate, out FlyerStartDate);
                     App.g_FlyerStartDate = FlyerStartDate;
                 }
-                string sFlyerEndDate = App.g_db.GetSetting("FlyerEndDate");
+                string sFlyerEndDate = await App.g_db.GetSetting("FlyerEndDate");
                 if (sFlyerEndDate == "")
                 {
                     App.g_FlyerEndDate = 0;
@@ -157,7 +163,7 @@ namespace POHuntsville
                     int.TryParse(sFlyerEndDate, out FlyerEndDate);
                     App.g_FlyerEndDate = FlyerEndDate;
                 }
-                if (App.g_db.GetSetting("AutoAdd1") == "1")
+                if (await App.g_db.GetSetting("AutoAdd1") == "1")
                 {
                     App.g_IsAutoAdd1 = true;
                 }
@@ -165,7 +171,7 @@ namespace POHuntsville
                 {
                     App.g_IsAutoAdd1 = false;
                 }
-                if (App.g_db.GetSetting("RefNoLookup") == "1")
+                if (await App.g_db.GetSetting("RefNoLookup") == "1")
                 {
                     App.g_IsRefNoLookup = true;
                 }
@@ -184,7 +190,7 @@ namespace POHuntsville
                 App.g_OrderNo = "";
                 App.g_HeaderTitle = "";
 
-                if (App.g_db.GetSetting("IsSalesUser") == "1")
+                if (await App.g_db.GetSetting("IsSalesUser") == "1")
                 {
                     App.g_IsSalesUser = true;
                 }
@@ -192,7 +198,7 @@ namespace POHuntsville
                 {
                     App.g_IsSalesUser = false;
                 }
-                if (App.g_db.GetSetting("IsChainManager") == "1")
+                if (await App.g_db.GetSetting("IsChainManager") == "1")
                 {
                     App.g_IsChainManager = true;
                 }
@@ -200,7 +206,7 @@ namespace POHuntsville
                 {
                     App.g_IsChainManager = false;
                 }
-                if (App.g_db.GetSetting("HoldForReview") == "1")
+                if (await App.g_db.GetSetting("HoldForReview") == "1")
                 {
                     App.g_HoldForReview = true;
                 }
@@ -208,7 +214,7 @@ namespace POHuntsville
                 {
                     App.g_HoldForReview = false;
                 }
-                if (App.g_db.GetSetting("BlockItemsNoQOH") == "1")
+                if (await App.g_db.GetSetting("BlockItemsNoQOH") == "1")
                 {
                     App.g_BlockItemsNoQOH = true;
                 }
@@ -217,7 +223,7 @@ namespace POHuntsville
                     App.g_BlockItemsNoQOH = false;
                 }
                 App.g_IsScandit = true;
-                App.g_ShoppingCartSort = App.g_db.GetSetting("ShoppingCartSort");
+                App.g_ShoppingCartSort = await App.g_db.GetSetting("ShoppingCartSort");
 
                 App.g_IsScannerInit = false;
                 App.g_ScanditViewModel = null;
@@ -239,13 +245,13 @@ namespace POHuntsville
                 location.Refresh();
 
                 App.g_Customer = new Customer();
-                App.g_ShoppingCartItems = App.g_db.GetCartPieces();
+                App.g_ShoppingCartItems = await App.g_db.GetCartPieces();
 
 
                 try
                 {
                     App.g_Customer = new Customer();
-                    App.g_Customer = App.g_db.GetCustomer();
+                    App.g_Customer = await App.g_db.GetCustomer();
                     if (App.g_Customer == null)
                     {
                         App.g_Customer = new Customer();
@@ -256,10 +262,10 @@ namespace POHuntsville
                     App.g_Customer = new Customer();
                 }
 
-                //App.g_CategoryList = App.g_db.GetCategories();
-                App.g_HomePageCategoryList = App.g_db.GetHomePageCategories();
-                App.g_ItemList = App.g_db.GetItems();
-                App.g_ReorderItemList = App.g_db.GetReorderItems();
+                //App.g_CategoryList = await App.g_db.GetCategories();
+                App.g_HomePageCategoryList = await App.g_db.GetHomePageCategories();
+                App.g_ItemList = await App.g_db.GetItems();
+                App.g_ReorderItemList = await App.g_db.GetReorderItems();
             }
 
         }
@@ -267,6 +273,7 @@ namespace POHuntsville
         {
             await App.CommManager.GetSettings();
             await App.RefreshAll();
+            await App.RefreshQOH();
             await App.RefreshOrderHistory();
         }
 
@@ -279,7 +286,7 @@ namespace POHuntsville
 
             try
             {
-                App.CommManager.GetSettings();
+                await App.CommManager.GetSettings();
             }
             catch { }
         }
@@ -289,7 +296,6 @@ namespace POHuntsville
             {
                 await App.CommManager.GetSalespersonCustomers(App.g_UserName);
             }
-            await App.RefreshQOH();
         }
 
         protected override Window CreateWindow(IActivationState? activationState)
@@ -338,5 +344,133 @@ namespace POHuntsville
             }
             catch { }
         }
+
+        private static CancellationTokenSource? _progressCts;
+        private static int _actualProgress;
+        private static int _displayProgress;
+
+        public static async Task StartProgress(int progress, string status)
+        {
+            _actualProgress = progress;
+            _displayProgress = progress;
+
+            _progressCts?.Cancel();
+            _progressCts = new CancellationTokenSource();
+
+            await UpdateProgressUI(_displayProgress, status);
+
+            _ = RunProgressAnimationAsync(status, _progressCts.Token);
+        }
+
+
+        private static async Task RunProgressAnimationAsync(
+            string status,
+            CancellationToken token)
+        {
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    await Task.Delay(1000, token);
+
+                    if (token.IsCancellationRequested)
+                        break;
+
+                    // Never go above 99 until actual progress reaches 100
+                    if (_displayProgress < _actualProgress + 40 &&
+                        _displayProgress < 99)
+                    {
+                        _displayProgress++;
+
+                        await UpdateProgressUI(
+                            _displayProgress,
+                            status);
+                    }
+
+                    // Reached 99, wait for the next real progress update
+                    if (_displayProgress >= 99)
+                        break;
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // Expected when a new progress update arrives
+            }
+        }
+
+        public static async Task ResetProgressAsync(
+    string status = "Starting...")
+        {
+            // Stop previous animation
+            _progressCts?.Cancel();
+            _progressCts?.Dispose();
+            _progressCts = null;
+
+            // Reset progress completely
+            _actualProgress = 0;
+            _displayProgress = 0;
+
+            await UpdateProgressUI(
+                0,
+                status);
+        }
+
+        public static async Task UpdateProgress(
+    int progress,
+    string status)
+        {
+            _actualProgress = Math.Clamp(progress, 0, 100);
+
+            // Cancel previous animation
+            _progressCts?.Cancel();
+            _progressCts?.Dispose();
+            _progressCts = null;
+
+            // Actual progress reached 100
+            if (_actualProgress >= 100)
+            {
+                _displayProgress = 100;
+
+                await UpdateProgressUI(
+                    100,
+                    status);
+
+                // No animation should run at 100
+                return;
+            }
+
+            // Don't move backwards
+            if (_displayProgress < _actualProgress)
+                _displayProgress = _actualProgress;
+
+            await UpdateProgressUI(
+                _displayProgress,
+                status);
+
+            // Start a NEW animation cycle
+            _progressCts = new CancellationTokenSource();
+
+            _ = RunProgressAnimationAsync(
+                status,
+                _progressCts.Token);
+        }
+
+        public static async Task UpdateProgressUI(double current,
+            string status)
+        {
+            switch (g_CurrentPage)
+            {
+                case "LoginPage":
+                    g_LoginPage.UpdateSyncProgress(current, status);
+                    break;
+                case "HomePage":
+                    g_HomePage.UpdateSyncProgress(current, status);
+                    break;
+                case "CustomerListPage":
+                    g_CustomerPage.UpdateSyncProgress(current, status);
+                    break;
+            }
+        }
+
     }
 }

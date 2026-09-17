@@ -78,14 +78,14 @@ namespace POHuntsville
 
         public async void Logout()
         {
-            App.g_db.SaveSetting("LoggedIn", "0");
+            await App.g_db.SaveSetting("LoggedIn", "0");
             App.g_IsLoggedIn = false;
             await App.g_Shell.GoToLogin();
         }
 
         public async Task<int> GoToHome()
         {
-            App.g_HeaderTitle = "Profit Order";            
+            App.g_HeaderTitle = "Profit Order";
             try
             {
                 await Current.GoToAsync("//HomePage");
@@ -98,7 +98,7 @@ namespace POHuntsville
         }
         public async Task<int> GoToShoppingCart()
         {
-            if (App.g_db.GetOrderCartItems().Count == 0)
+            if ((await App.g_db.GetOrderCartItems()).Count == 0)
             {
                 await Shell.Current.DisplayAlertAsync("Profit Order", "Your shopping cart is empty", "Ok");
                 return 0;
@@ -110,7 +110,7 @@ namespace POHuntsville
         }
         public async Task<int> GoToReturnCart()
         {
-            if (App.g_db.GetReturnCartItems().Count == 0)
+            if ((await App.g_db.GetReturnCartItems()).Count == 0)
             {
                 await Shell.Current.DisplayAlertAsync("Profit Order", "Your return cart is empty", "Ok");
                 return 0;
@@ -122,7 +122,7 @@ namespace POHuntsville
         }
         public async Task<int> GoToLabelCart()
         {
-            if (App.g_db.GetLabelCartItems().Count == 0)
+            if ((await App.g_db.GetLabelCartItems()).Count == 0)
             {
                 await Shell.Current.DisplayAlertAsync("Profit Order", "Your label print cart is empty", "Ok");
                 return 0;
@@ -134,7 +134,7 @@ namespace POHuntsville
         }
 
         public async Task<int> GoToSplash()
-        {   
+        {
             App.g_HeaderTitle = "Settings";
             await Current.GoToAsync("//HomePage/SplashScreen");
             return 0;

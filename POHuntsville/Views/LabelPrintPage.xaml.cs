@@ -20,12 +20,12 @@ namespace POHuntsville.Views
             //App.g_LabelCartPage = this;
         }
 
-        protected override void OnAppearing()
+        protected override async void OnAppearing()
         {
             base.OnAppearing();
 
-            //Database db = new Database();
-            List<Item> items = App.g_db.GetReturnCartItems();
+
+            List<Item> items = await App.g_db.GetReturnCartItems();
 
             if (items.Count > 0)
             {
@@ -39,7 +39,7 @@ namespace POHuntsville.Views
         {
             ItemsListCart.ItemsSource = null;
 
-            ItemsListCart.ItemsSource = App.g_db.GetLabelCartItems();
+            ItemsListCart.ItemsSource = await App.g_db.GetLabelCartItems();
 
             foreach (Item i in (List<Item>)ItemsListCart.ItemsSource)
             {
@@ -58,7 +58,7 @@ namespace POHuntsville.Views
 
             if (bClear)
             {
-                App.g_db.ClearLabelCartItems();
+                await App.g_db.ClearLabelCartItems();
                 await App.g_Shell.GoToHome();
             }
         }

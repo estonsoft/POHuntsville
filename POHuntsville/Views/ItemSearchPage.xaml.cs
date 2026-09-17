@@ -12,7 +12,7 @@ namespace POHuntsville.Views
         bool _topSellers;
         bool _inStockOnly;
         string _search_text;
-        List<Item> lstItems = new ();
+        List<Item> lstItems = new();
 
         // The items actually shown in the CollectionView
 
@@ -21,7 +21,7 @@ namespace POHuntsville.Views
         // Remove [ObservableProperty] from itemtoload field
         // and implement as a property with OnPropertyChanged
 
-        
+
         public string Category
         {
             get { return _category; }
@@ -127,13 +127,13 @@ namespace POHuntsville.Views
             Subcategory = App.g_Subcategory.Description;
             Subsubcategory = App.g_Subsubcategory.Description;
 
-            if (App.g_db.GetSubcategoryCount(App.g_Category.Code) == 0)
+            if (await App.g_db.GetSubcategoryCount(App.g_Category.Code) == 0)
             {
                 SubcategoryLabel.IsVisible = false;
                 SubsubcategoryLabel.IsVisible = false;
             }
 
-            if (App.g_db.GetSubsubcategoryCount(App.g_Category.Code, App.g_Subcategory.Code) == 0)
+            if (await App.g_db.GetSubsubcategoryCount(App.g_Category.Code, App.g_Subcategory.Code) == 0)
             {
                 SubsubcategoryLabel.IsVisible = false;
             }
@@ -142,17 +142,17 @@ namespace POHuntsville.Views
             {
                 if (App.g_IsMonthlyAdPDFClick)
                 {
-                    lstItems = App.g_db.SearchItemsMonthlyAdClick(App.g_MonthlyAdPage, App.g_MonthlyAdX, App.g_MonthlyAdY);
+                    lstItems = await App.g_db.SearchItemsMonthlyAdClick(App.g_MonthlyAdPage, App.g_MonthlyAdX, App.g_MonthlyAdY);
                     App.g_IsMonthlyAdPDFClick = false;
                 }
                 else
                 {
-                    lstItems = App.g_db.SearchItems(App.g_SearchText, App.g_Category, App.g_ScanBarcode, App.g_Subcategory, App.g_Subsubcategory);
+                    lstItems = await App.g_db.SearchItems(App.g_SearchText, App.g_Category, App.g_ScanBarcode, App.g_Subcategory, App.g_Subsubcategory);
                 }
             }
             else
             {
-                lstItems = App.g_db.SearchItemsQuickEntry(App.g_ScanBarcode);
+                lstItems = await App.g_db.SearchItemsQuickEntry(App.g_ScanBarcode);
             }
 
             int iItems = 0;
@@ -191,7 +191,8 @@ namespace POHuntsville.Views
                     // User tapped 'No' - Handle cancellation or do nothing
                 }
             }
-            else if (iItems == 0 ){
+            else if (iItems == 0)
+            {
                 await Shell.Current.DisplayAlertAsync(
                "Profit Order",
                "No items found in selected category.Please modify your search.",
@@ -320,8 +321,8 @@ namespace POHuntsville.Views
         private void Button_Clicked(object sender, EventArgs e)
         {
             ImageOverlay.IsVisible = false;
-            if (ItemsListSearch.SelectedItem!= null)
-            {   
+            if (ItemsListSearch.SelectedItem != null)
+            {
                 ItemsListSearch.SelectedItem = null;
                 FullImage.Source = null;
             }
@@ -330,8 +331,8 @@ namespace POHuntsville.Views
         private void ItemsListSearch_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var selectedItem = e.CurrentSelection?.FirstOrDefault() as Item;
-                if (selectedItem == null)
-                    return;
+            if (selectedItem == null)
+                return;
             ImageOverlay.IsVisible = true;
             FullImage.Source = selectedItem.ImageURL;
         }

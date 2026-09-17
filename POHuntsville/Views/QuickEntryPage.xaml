@@ -6,22 +6,22 @@
     xmlns:controls="clr-namespace:POHuntsville.Controls"
     xmlns:d="http://xamarin.com/schemas/2014/forms/design"
     xmlns:ffimageloading="clr-namespace:FFImageLoading.Maui;assembly=FFImageLoading.Maui"
-    xmlns:scanditBarcode="clr-namespace:Scandit.DataCapture.Barcode.Ar.UI.Maui;assembly=ScanditBarcodeCaptureMaui"
-    xmlns:scanditCore="clr-namespace:Scandit.DataCapture.Core.UI.Maui;assembly=ScanditCaptureCoreMaui"
+    xmlns:barcode="clr-namespace:BarcodeScanning;assembly=BarcodeScanning.Native.Maui"
     Title="Quick Entry"
     BackgroundColor="White"
     HideSoftInputOnTapped="True"
     Shell.NavBarIsVisible="False">
 
     <ContentPage.Content>
-        <Grid Margin="{OnPlatform iOS='0,50,0,0', Android='0'}" SafeAreaEdges="{OnPlatform iOS='None', Android='All'}">
+        <Grid Margin="{OnPlatform iOS='0,50,0,0', Android='0'}"
+              SafeAreaEdges="{OnPlatform iOS='None', Android='All'}">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <controls:CustomHeader Grid.Row="0" />
+            <controls:CustomHeader Grid.Row="0"/>
 
             <ScrollView Grid.Row="1">
                 <StackLayout
@@ -29,13 +29,15 @@
                     BackgroundColor="White"
                     VerticalOptions="Start">
                     <Grid>
-                        <scanditCore:DataCaptureView
-                            x:Name="ScannerView"
-                            DataCaptureContext="{Binding DataCaptureContext}"
-                            HeightRequest="180"
+                        <barcode:CameraView
+                            x:Name="ScannerControl"
+                            CameraEnabled="True"
+                            HeightRequest="200"
                             HorizontalOptions="Center"
+                            OnDetectionFinished="OnBarcodeDetected"
                             VerticalOptions="Center"
-                            WidthRequest="200" />
+                            VibrationOnDetected="True"
+                            WidthRequest="200"/>
                         <!--<Label Text="" TextDecorations="Underline" Margin="0,-105,0,0" HeightRequest="2" WidthRequest="200" FontSize="14" HorizontalOptions="Fill" BackgroundColor="RoyalBlue" TextColor="RoyalBlue"/>-->
                         <StackLayout
                             x:Name="TapToScan"
@@ -43,7 +45,7 @@
                             IsVisible="false"
                             VerticalOptions="Center">
                             <StackLayout.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnScannerEnable" />
+                                <TapGestureRecognizer Tapped="OnScannerEnable"/>
                             </StackLayout.GestureRecognizers>
                             <Label
                                 FontAttributes="Bold"
@@ -52,14 +54,14 @@
                                 HorizontalOptions="Center"
                                 Text="&#xF030;"
                                 TextColor="Red"
-                                VerticalOptions="Center" />
+                                VerticalOptions="Center"/>
                             <Label
                                 FontAttributes="Bold"
                                 FontSize="20"
                                 HorizontalOptions="Center"
                                 Text="Tap To Scan"
                                 TextColor="Red"
-                                VerticalOptions="Center" />
+                                VerticalOptions="Center"/>
                         </StackLayout>
                     </Grid>
                     <Label
@@ -69,7 +71,7 @@
                         FontSize="16"
                         HorizontalOptions="Center"
                         IsVisible="false"
-                        TextColor="Red" />
+                        TextColor="Red"/>
                     <StackLayout
                         Margin="0,10,0,0"
                         HorizontalOptions="Center"
@@ -86,7 +88,7 @@
                             Placeholder="Item # or UPC"
                             PlaceholderColor="Gray"
                             VerticalOptions="Center"
-                            WidthRequest="200" />
+                            WidthRequest="200"/>
                         <Button
                             x:Name="EnterButton"
                             Margin="10,0,0,0"
@@ -99,7 +101,7 @@
                             HorizontalOptions="Start"
                             Text="  Enter  "
                             TextColor="White"
-                            TextTransform="None" />
+                            TextTransform="None"/>
 
                     </StackLayout>
                     <CollectionView
@@ -108,14 +110,15 @@
                         SelectionMode="None">
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
-                                <controls:CustomListItem x:Name="CustomListItemScan" Grid.Row="0" />
+                                <controls:CustomListItem x:Name="CustomListItemScan"
+                                                         Grid.Row="0"/>
                             </DataTemplate>
                         </CollectionView.ItemTemplate>
                     </CollectionView>
                 </StackLayout>
             </ScrollView>
 
-            <controls:CustomToolbar Grid.Row="2" />
+            <controls:CustomToolbar Grid.Row="2"/>
         </Grid>
     </ContentPage.Content>
 </ContentPage>

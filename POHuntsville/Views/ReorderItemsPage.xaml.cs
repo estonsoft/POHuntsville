@@ -22,7 +22,7 @@
             ReorderItemsList.ItemsSource = null;
             ReorderItemsList.ItemsSource = App.g_ReorderItemList;
 
-            List<Item> lstItem = App.g_db.GetItems();
+            List<Item> lstItem = await App.g_db.GetItems();
 
             foreach (Item ri in (List<Item>)ReorderItemsList.ItemsSource)
             {

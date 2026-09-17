@@ -56,7 +56,7 @@ public class CustomToolbar : StackLayout
         };
         HeightRequest = height;
         BackgroundColor = Colors.Blue;
-        
+
         gridContainer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Star });
         gridContainer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Star });
         gridContainer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Star });
@@ -106,7 +106,7 @@ public class CustomToolbar : StackLayout
     {
         var stack = new VerticalStackLayout
         {
-            BackgroundColor = Colors.Blue,           
+            BackgroundColor = Colors.Blue,
             HeightRequest = height,
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center
@@ -116,7 +116,7 @@ public class CustomToolbar : StackLayout
         {
             stack.Margin = new Thickness(0, 30, 0, 0);
         }
-            
+
         icon = new Image
         {
             Margin = new Thickness(0, 8, 0, 0),
@@ -159,7 +159,7 @@ public class CustomToolbar : StackLayout
 
     async void OnShoppingCartTapped(object sender, EventArgs e)
     {
-        List<Item> items = App.g_db.GetOrderCartItems();
+        List<Item> items = await App.g_db.GetOrderCartItems();
 
         if (items.Count == 0)
             await Shell.Current.DisplayAlertAsync("Profit Order", "Your shopping cart is empty", "Ok");

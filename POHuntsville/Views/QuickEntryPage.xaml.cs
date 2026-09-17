@@ -2,25 +2,18 @@
 using FluentFTP.Helpers;
 using Scandit.DataCapture.Barcode.Data;
 using POHuntsville.ViewModels;
+using BarcodeScanning;
 
 namespace POHuntsville.Views
 {
     [XamlCompilation(XamlCompilationOptions.Compile)]
     public partial class QuickEntryPage : ContentPage
     {
-        public ScanditViewModelBase viewModel = null;
         List<Item> lstItems;
 
         public QuickEntryPage()
         {
             InitializeComponent();
-            if (App.g_ScanditViewModel == null)
-            {
-                App.g_ScanditViewModel = new ScanditViewModelBase(this);
-            }
-
-            this.viewModel = App.g_ScanditViewModel;
-            BindingContext = viewModel;
         }
 
         protected override async void OnAppearing()
@@ -34,22 +27,33 @@ namespace POHuntsville.Views
 
             await Task.Delay(100);
 
-            ScanItem.Text = "";
+            ScanItem.Text = ""; RequestCameraPermission();
+        }
 
-            await viewModel.OnResumeAsync();
+        async void RequestCameraPermission()
+        {
+            var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
+
+            if (status != PermissionStatus.Granted)
+            {
+                status = await Permissions.RequestAsync<Permissions.Camera>();
+            }
+
+            if (status == PermissionStatus.Granted)
+            {
+                // Explicitly switch the hardware feed on after permission is secure
+                ScannerControl.CameraEnabled = true; //
+            }
+            else
+            {
+                await DisplayAlertAsync("Permission Denied", "Camera access is required to scan.", "OK");
+            }
         }
 
         protected override void OnDisappearing()
         {
-            try
-            {
-                _ = this.viewModel.OnSleep();
-                base.OnDisappearing();
-                Content = null;
-            }
-            catch
-            {
-            }
+            base.OnDisappearing();
+            ScannerControl.CameraEnabled = false;
         }
 
         protected override bool OnBackButtonPressed()
@@ -60,7 +64,7 @@ namespace POHuntsville.Views
         private void ShowItemInfo(Item item)
         {
             Item.SetListItem(item, "O");
-            
+
             item.IsBoxViewVisible = false;
 
             lstItems.Clear();
@@ -91,15 +95,14 @@ namespace POHuntsville.Views
             Message.IsVisible = true;
         }
 
-        public void ScanComplete(String barcode)
+        public async void ScanComplete(String barcode)
         {
             ClearItemInfo();
             ScanItem.Text = barcode;
-            viewModel.OnSleep();
 
             TapToScan.IsVisible = true;
 
-            Item item = FindItem();
+            Item item = await FindItem();
 
             if (item == null)
             {
@@ -109,7 +112,7 @@ namespace POHuntsville.Views
                 return;
             }
 
-            if (App.g_db.GetItemQty(item.ItemNo) > 0)
+            if (await App.g_db.GetItemQty(item.ItemNo) > 0)
             {
                 SetMessage("Item Already In Shopping Cart");
             }
@@ -134,9 +137,9 @@ namespace POHuntsville.Views
             ScanComplete(ScanItem.Text.Trim());
         }
 
-        private Item FindItem()
+        private async Task<Item> FindItem()
         {
-            //Database db = new Database();
+
 
             Item item = null;
             List<Item> items = new List<Item>();
@@ -151,12 +154,12 @@ namespace POHuntsville.Views
 
                 if (ItemNo > 0)
                 {
-                    item = App.g_db.FindItem(ItemNo, ItemNo.ToString());
+                    item = await App.g_db.FindItem(ItemNo, ItemNo.ToString());
                 }
 
                 if (item == null)
                 {
-                    items = App.g_db.SearchItemsQuickEntry(ScanText);
+                    items = await App.g_db.SearchItemsQuickEntry(ScanText);
 
                     if (items.Count >= 1)
                     {
@@ -169,7 +172,7 @@ namespace POHuntsville.Views
                     if (App.g_IsAutoAdd1)
                     {
                         item.QtyOrder += 1;
-                        App.g_db.UpdateItemQtySet(item.ItemNo, item.QtyOrder);
+                        await App.g_db.UpdateItemQtySet(item.ItemNo, item.QtyOrder);
                     }
                 }
             }
@@ -177,11 +180,31 @@ namespace POHuntsville.Views
             return item;
         }
 
+        private void OnBarcodeDetected(object sender, OnDetectionFinishedEventArg e)
+        {
+            // Check if anything was read in the current frame
+            if (e.BarcodeResults.Count == 0) return;
+
+            // The engine processes frames on a background threat thread; route to UI thread
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                // Pause camera processing to handle the logic flow
+                ScannerControl.CameraEnabled = false;
+
+                var primaryItem = e.BarcodeResults.First();
+                ScanComplete(primaryItem.DisplayValue.Trim());
+                //await DisplayAlertAsync("Native Scan Match",
+                //    $"Value: {primaryItem.DisplayValue}\nType: {primaryItem.BarcodeFormat}",
+                //    "OK");
+            });
+        }
+
         async void OnScannerEnable(object sender, EventArgs e)
         {
             ClearItemInfo();
+            // Resume scanning pipeline
+            ScannerControl.CameraEnabled = true;
             TapToScan.IsVisible = false;
-            _ = this.viewModel.OnResumeAsync();
             ScanItem.Text = "";
             Message.Text = "";
         }

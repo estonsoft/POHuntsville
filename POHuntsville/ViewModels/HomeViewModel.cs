@@ -4,6 +4,16 @@ namespace POHuntsville.ViewModels
 {
     public class HomeViewModel : BaseViewModel
     {
+        private List<Category> _categories = new();
+        public List<Category> categories
+        {
+            get => _categories;
+            set
+            {
+                _categories = value;
+                OnPropertyChanged();
+            }
+        }
         public HomeViewModel()
         {
             Title = ""; // "Home";
@@ -18,5 +28,20 @@ namespace POHuntsville.ViewModels
         public ICommand OpenRegister { get; }
 
         public ICommand OpenWebCommand { get; }
+
+        public async Task LoadCategories()
+        {
+
+            try
+            {
+                // 1. Fetch data on a background thread pool worker
+                var topcategories = await App.g_db.GetHomePageCategories();
+                categories = topcategories;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error loading categories on iOS: " + ex.Message);
+            }
+        }
     }
 }
