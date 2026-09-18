@@ -1,38 +1,25 @@
 ﻿<ContentView
     x:Class="POHuntsville.Controls.HomePageItems"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:ffimageloading="clr-namespace:FFImageLoading.Maui;assembly=FFImageLoading.Maui"
-    xmlns:controls="clr-namespace:POHuntsville.Controls"
-    xmlns:data="clr-namespace:POHuntsville.Data"
-    x:DataType="data:Category">
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+        xmlns:ffimageloading="clr-namespace:FFImageLoading.Maui;assembly=FFImageLoading.Maui"
+    xmlns:controls="clr-namespace:POHuntsville.Controls">
 
-    <Border
-        Background="White"
-        HeightRequest="154"
-        Stroke="#D9E2F2"
-        WidthRequest="132">
-        <Border.StrokeShape>
-            <RoundRectangle CornerRadius="16" />
-        </Border.StrokeShape>
-        <Border.GestureRecognizers>
-            <TapGestureRecognizer Tapped="OnCategoryTapped" />
-        </Border.GestureRecognizers>
-        <VerticalStackLayout Padding="10" Spacing="8">
-            <ffimageloading:CachedImage
-                Aspect="AspectFit"
-                ErrorPlaceholder="missing_item.jpg"
-                HeightRequest="104"
-                LoadingPlaceholder="missing_item.jpg"
-                Source="{Binding ImageURL}"
-                WidthRequest="110" />
-            <Label
-                FontAttributes="Bold"
-                FontSize="13"
-                HorizontalTextAlignment="Center"
-                LineBreakMode="TailTruncation"
-                MaxLines="1"
-                Text="{Binding Description}"
-                TextColor="#172B4D" />
-        </VerticalStackLayout>
-    </Border>
+    <VerticalStackLayout BackgroundColor="White">
+        <ffimageloading:CachedImage
+            Aspect="AspectFit"
+            ErrorPlaceholder="missing_item.jpg"
+            HeightRequest="100"
+            LoadingPlaceholder="missing_item.jpg"
+            Source="{Binding ImageURL}"
+            WidthRequest="100"/>
+        <Label
+            BackgroundColor="White"
+            FontAttributes="Bold"
+            FontSize="14"
+            HorizontalTextAlignment="Center"
+            LineBreakMode="WordWrap"
+            Text="{Binding Description}"
+            TextColor="Blue"/>
+    </VerticalStackLayout>
 </ContentView>

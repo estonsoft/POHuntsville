@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using POHuntsville.Controls;
 using POHuntsville.ViewModels;
 
 namespace POHuntsville.Views
@@ -159,13 +158,6 @@ namespace POHuntsville.Views
             }
         }
 
-        private void OnHomeCategoryTapped(object sender, EventArgs e)
-        {
-            if (sender is HomePageItems categoryView && categoryView.BindingContext is Category category)
-            {
-                CategoryTapped(category.Code, category.Description);
-            }
-        }
         async void OnCategoryTapped(object sender, EventArgs e)
         {
             TappedEventArgs te = (TappedEventArgs)e;

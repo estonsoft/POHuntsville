@@ -495,7 +495,7 @@ namespace POHuntsville
 
                     await App.CommManager.GetItemQOH(App.g_Customer.CustNo);
                     await App.CommManager.GetOrderHistory(App.g_Customer.CustNo);
-                    await App.CommManager.GetFlyerItemsPDF();
+                    // await App.CommManager.GetFlyerItemsPDF();
                 }
             }
             catch (Exception ex)
