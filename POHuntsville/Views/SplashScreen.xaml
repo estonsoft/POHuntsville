@@ -2,7 +2,8 @@
 <ContentPage
     x:Class="POHuntsville.Views.SplashScreen"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:ffimageloading="clr-namespace:FFImageLoading.Maui;assembly=FFImageLoading.Maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+        xmlns:ffimageloading="clr-namespace:FFImageLoading.Maui;assembly=FFImageLoading.Maui"
     xmlns:controls="clr-namespace:POHuntsville.Controls"
     Title="SplashScreen">
     <Grid
@@ -10,9 +11,9 @@
         HorizontalOptions="Fill"
         SafeAreaEdges="None"
         VerticalOptions="Fill">
-       <ffimageloading:CachedImage 
+        <ffimageloading:CachedImage
             HorizontalOptions="Center"
-            Source="logo.png"
-            VerticalOptions="Center" />
+            Source="logo.jpg"
+            VerticalOptions="Center"/>
     </Grid>
 </ContentPage>

@@ -2,14 +2,15 @@
 <ContentPage
     x:Class="POHuntsville.Views.AboutPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:ffimageloading="clr-namespace:FFImageLoading.Maui;assembly=FFImageLoading.Maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+        xmlns:ffimageloading="clr-namespace:FFImageLoading.Maui;assembly=FFImageLoading.Maui"
     xmlns:controls="clr-namespace:POHuntsville.Controls"
     xmlns:ios="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;assembly=Microsoft.Maui.Controls"
     xmlns:vm="clr-namespace:POHuntsville.ViewModels"
     Title="{Binding Title}">
 
     <ContentPage.BindingContext>
-        <vm:AboutViewModel />
+        <vm:AboutViewModel/>
     </ContentPage.BindingContext>
 
     <ContentPage.Resources>
@@ -18,10 +19,11 @@
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <Grid Margin="{OnPlatform iOS='0,50,0,0', Android='0'}" SafeAreaEdges="{OnPlatform iOS='None', Android='All'}">
+    <Grid Margin="{OnPlatform iOS='0,50,0,0', Android='0'}"
+            SafeAreaEdges="{OnPlatform iOS='None', Android='All'}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <StackLayout
             BackgroundColor="{StaticResource Accent}"
@@ -31,11 +33,12 @@
                 HorizontalOptions="Center"
                 Orientation="Horizontal"
                 VerticalOptions="Center">
-                <ContentView Padding="0,40,0,40" VerticalOptions="Fill">
-                   <ffimageloading:CachedImage 
+                <ContentView Padding="0,40,0,40"
+                        VerticalOptions="Fill">
+                    <ffimageloading:CachedImage
                         HeightRequest="64"
-                        Source="xamarin_logo.png"
-                        VerticalOptions="Center" />
+                        Source="xamarin_logo.jpg"
+                        VerticalOptions="Center"/>
                 </ContentView>
             </StackLayout>
         </StackLayout>
@@ -44,17 +47,20 @@
                 Padding="30,24,30,24"
                 Orientation="Vertical"
                 Spacing="10">
-                <Label FontSize="Title" Text="Start developing now" />
+                <Label FontSize="Title"
+                        Text="Start developing now"/>
                 <Label
                     Padding="0,0,0,0"
                     FontSize="16"
-                    Text="Make changes to your XAML file and save to see your UI update in the running app with XAML Hot Reload. Give it a try!" />
-                <Label Padding="0,24,0,0" FontSize="16">
+                    Text="Make changes to your XAML file and save to see your UI update in the running app with XAML Hot Reload. Give it a try!"/>
+                <Label Padding="0,24,0,0"
+                        FontSize="16">
                     <Label.FormattedText>
                         <FormattedString>
                             <FormattedString.Spans>
-                                <Span Text="Learn more at " />
-                                <Span FontAttributes="Bold" Text="https://aka.ms/xamarin-quickstart" />
+                                <Span Text="Learn more at "/>
+                                <Span FontAttributes="Bold"
+                                        Text="https://aka.ms/xamarin-quickstart"/>
                             </FormattedString.Spans>
                         </FormattedString>
                     </Label.FormattedText>
@@ -64,7 +70,7 @@
                     BackgroundColor="{StaticResource Primary}"
                     Command="{Binding OpenWebCommand}"
                     Text="Learn more"
-                    TextColor="White" />
+                    TextColor="White"/>
             </StackLayout>
         </ScrollView>
     </Grid>

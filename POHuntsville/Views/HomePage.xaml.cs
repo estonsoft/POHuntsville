@@ -71,7 +71,7 @@ namespace POHuntsville.Views
             }
             catch
             {
-                BannerImage.Source = ImageSource.FromResource("logo.png");
+                BannerImage.Source = ImageSource.FromResource("logo.jpg");
             }
         }
         protected async override void OnAppearing()
