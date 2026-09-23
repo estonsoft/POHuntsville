@@ -13,7 +13,7 @@
     <Shell.Resources>
         <ResourceDictionary>
             <Style x:Key="BaseStyle"
-                    TargetType="Element">
+                   TargetType="Element">
                 <Setter Property="Shell.BackgroundColor"
                         Value="white"/>
                 <Setter Property="Shell.ForegroundColor"
@@ -34,11 +34,11 @@
                         Value="blue"/>
             </Style>
             <Style BasedOn="{StaticResource BaseStyle}"
-                    TargetType="TabBar"/>
+                   TargetType="TabBar"/>
             <Style BasedOn="{StaticResource BaseStyle}"
-                    TargetType="FlyoutItem"/>
+                   TargetType="FlyoutItem"/>
             <Style x:Key="FlyoutHeaderStyle"
-                    TargetType="ffimageloading:CachedImage">
+                   TargetType="ffimageloading:CachedImage">
                 <Setter Property="BackgroundColor"
                         Value="White"/>
                 <Setter Property="Margin"
@@ -50,7 +50,7 @@
                 https://docs.microsoft.com/xamarin/xamarin-forms/app-fundamentals/shell/flyout#flyoutitem-and-menuitem-style-classes
             -->
             <Style Class="FlyoutItemLabelStyle"
-                    TargetType="Label">
+                   TargetType="Label">
                 <Setter Property="TextColor"
                         Value="Gray"/>
                 <Setter Property="HeightRequest"
@@ -93,7 +93,7 @@
             </Style>
 
             <Style x:Key="MyButtonStyle"
-                    TargetType="Button">
+                   TargetType="Button">
                 <Setter Property="VisualStateManager.VisualStateGroups">
                     <VisualStateGroupList>
                         <VisualStateGroup x:Name="CommonStates">
@@ -152,7 +152,7 @@
                     Aspect="AspectFit"
                     HeightRequest="100"
                     HorizontalOptions="Center"
-                    Source="logo.jpg"
+                    Source="logo.png"
                     StyleClass="FlyoutHeaderStyle"
                     VerticalOptions="Center"/>
             </Grid>
@@ -160,7 +160,7 @@
     </Shell.FlyoutHeaderTemplate>
 
     <FlyoutItem Title="Home"
-            FlyoutDisplayOptions="AsMultipleItems">
+                FlyoutDisplayOptions="AsMultipleItems">
         <ShellContent
             x:Name="MenuHome"
             Title="Home"

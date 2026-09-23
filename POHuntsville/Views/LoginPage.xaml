@@ -56,7 +56,7 @@
                             Aspect="AspectFit"
                             HeightRequest="180"
                             HorizontalOptions="Center"
-                            Source="logo.jpg"
+                            Source="logo.png"
                             StyleClass="FlyoutHeaderStyle"
                             VerticalOptions="Center"
                             WidthRequest="300"/>
